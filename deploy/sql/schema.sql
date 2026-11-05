@@ -27,3 +27,25 @@ CREATE TABLE IF NOT EXISTS `user` (
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表';
+
+-- ------------------------------------------------------------
+-- 内容表
+--   uk_user_idem   (user_id, idem_key) 幂等：同一次发布的重试只落一条
+--   idx_deleted_id (deleted, id)       信息流：软删过滤 + id 倒序游标分页
+--   idx_user_id    (user_id)           作者维度：查某人发过什么
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `content` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键，同时作为游标',
+    `user_id`    BIGINT UNSIGNED NOT NULL                COMMENT '作者 id',
+    `idem_key`   VARCHAR(64)     NOT NULL                COMMENT '幂等键，客户端生成，重试时复用',
+    `body`       TEXT            NOT NULL                COMMENT '正文',
+    `deleted`    TINYINT         NOT NULL DEFAULT 0      COMMENT '0 正常 / 1 已删（软删）',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_idem` (`user_id`, `idem_key`),
+    KEY `idx_deleted_id` (`deleted`, `id`),
+    KEY `idx_user_id` (`user_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT = '内容表';
