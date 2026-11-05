@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: community
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 白名单：只开放健康检查与信息端点，env/beans/heapdump 一律不对外
+        include: health,info
+  endpoint:
+    health:
+      # 不向匿名调用方展示数据库/磁盘等明细，只给 status
+      show-details: never
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: 0.0.1-SNAPSHOT
