@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# 提交信息钩子：只认一种形状  type(scope): 描述
+# 启用一次：git config core.hooksPath .githooks
+set -u
+
+msg_file=${1:-}
+if [[ -z $msg_file || ! -f $msg_file ]]; then
+  echo "commit-msg: 没有拿到提交信息文件" >&2
+  exit 1
+fi
+
+subject=$(head -n 1 "$msg_file" | tr -d '\r')
+types='feat|fix|docs|refactor|test|chore|perf|build|revert'
+pattern="^(${types})\([a-z0-9][a-z0-9-]*\): .+$"
+
+if [[ $subject =~ $pattern ]]; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+提交信息格式不对，只接受这一种形状：
+
+    type(scope): 描述
+
+  type   feat | fix | docs | refactor | test | chore | perf | build | revert
+  scope  模块名，小写字母/数字/连字符，如 auth、content、like、redis、docs
+  描述    冒号后空一格，写这次做了什么
+
+例：
+    feat(auth): 注册接口与 BCrypt 密码存储
+    feat(content): 发布内容并按游标分页
+    feat(like): 点赞写入 Redis Set 与热榜
+    docs(api): 补充分页与幂等头说明
+
+你的第一行是：${subject}
+EOF
+exit 1
