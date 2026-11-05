@@ -49,3 +49,21 @@ CREATE TABLE IF NOT EXISTS `content` (
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT = '内容表';
+
+-- ------------------------------------------------------------
+-- 点赞关系表
+--   uk_user_content (user_id, content_id) 一人一条：重复点赞由数据库拒绝
+--   idx_content     (content_id)          反向查询：「这条内容有多少赞 / 谁赞了」
+--   注意：唯一键最左前缀是 user_id，只按 content_id 查用不上它，故单建 idx_content
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `content_like` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id`    BIGINT UNSIGNED NOT NULL                COMMENT '点赞用户 id',
+    `content_id` BIGINT UNSIGNED NOT NULL                COMMENT '被赞内容 id',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_content` (`user_id`, `content_id`),
+    KEY `idx_content` (`content_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT = '点赞关系表';
