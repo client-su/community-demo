@@ -1,6 +1,39 @@
+# ---- 构建产物 ----
 target/
+build/
+out/
+*.jar
+*.war
+
+# ---- 日志 ----
 *.log
+logs/
+
+# ---- IDE / 编辑器 ----
 .idea/
 *.iml
 .vscode/
+*.swp
+.classpath
+.project
+.settings/
+
+# ---- 密钥与本地配置（绝不入库）----
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# ---- 本地数据库 / 临时文件 ----
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.bak
+
+# ---- 系统文件 ----
+.DS_Store
+Thumbs.db
