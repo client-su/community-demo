@@ -1,11 +1,34 @@
 spring:
   application:
     name: community
+  datasource:
+    # 账号密码走环境变量，仓库里只留本地默认值，禁止把真实密码提交上去
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:community}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: community-pool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      # 拿不到连接最多等 3 秒就失败，避免请求线程被拖死
+      connection-timeout: 3000
+
+mybatis:
+  configuration:
+    # 数据库 user_id -> Java userId，省掉 resultMap 里的逐列映射
+    map-underscore-to-camel-case: true
+  type-aliases-package: com.community
+  mapper-locations: classpath:mapper/*.xml
 
 server:
   port: 8080
 
 management:
+  health:
+    # 让 /actuator/health 包含 db 组件：数据库连不上时状态变 DOWN
+    db:
+      enabled: true
   endpoints:
     web:
       exposure:
