@@ -21,6 +21,11 @@ mybatis:
   type-aliases-package: com.community
   mapper-locations: classpath:mapper/*.xml
 
+app:
+  security:
+    # BCrypt 成本因子：每 +1 计算量翻倍。10 约 50-100ms/次
+    bcrypt-strength: 10
+
 server:
   port: 8080
 

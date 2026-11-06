@@ -36,6 +36,13 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- 只要密码学工具（BCrypt），不要 starter-security：
+             后者会自动给全站加上 Basic 认证，所有接口立刻 401 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- 参数校验：@Valid / @NotBlank 等（Bean Validation 实现为 Hibernate Validator） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
