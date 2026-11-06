@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,5 +34,16 @@ public class AuthController {
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.ok(authService.login(request));
+    }
+
+    /**
+     * 登出：把当前 token 的 jti 加入黑名单。
+     * 该路径不在白名单里，所以必须先登录（否则任何人都能替别人注销）。
+     */
+    @PostMapping("/logout")
+    public Result<Void> logout(
+            @RequestAttribute(JwtAuthInterceptor.PAYLOAD_ATTRIBUTE) JwtPayload payload) {
+        authService.logout(payload);
+        return Result.ok();
     }
 }

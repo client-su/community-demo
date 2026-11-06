@@ -6,6 +6,7 @@ import com.community.auth.dto.RegisterRequest;
 import com.community.auth.dto.UserVO;
 import com.community.common.BizException;
 import com.community.common.ErrorCode;
+import com.community.common.SecurityRedisService;
 import com.community.user.User;
 import com.community.user.UserMapper;
 import org.springframework.dao.DuplicateKeyException;
@@ -20,6 +21,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final SecurityRedisService securityRedisService;
 
     /**
      * 用户不存在时也跑一次 BCrypt，让两条失败路径耗时接近。
@@ -28,10 +30,12 @@ public class AuthService {
     private static final String DUMMY_HASH =
             "$2a$10$AbGNcTD8igqeCal7AVECYu4AkyxvdBAxSvtvYvr0.kZihvhp6bh4q";
 
-    public AuthService(UserMapper userMapper, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserMapper userMapper, PasswordEncoder passwordEncoder,
+                       JwtService jwtService, SecurityRedisService securityRedisService) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.securityRedisService = securityRedisService;
     }
 
     @Transactional
@@ -75,5 +79,10 @@ public class AuthService {
 
         JwtService.Issued issued = jwtService.issue(user.getId());
         return new LoginResponse(issued.token(), "Bearer", issued.expiresAt());
+    }
+
+    /** 登出：只作废当前这张票，其他设备的 token 不受影响 */
+    public void logout(JwtPayload payload) {
+        securityRedisService.blacklistJti(payload.jti(), payload.expiresAt());
     }
 }

@@ -13,6 +13,13 @@ spring:
       minimum-idle: 2
       # 拿不到连接最多等 3 秒就失败，避免请求线程被拖死
       connection-timeout: 3000
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # 超时短一点：鉴权路径上不该被 Redis 拖住
+      timeout: 2s
+      connect-timeout: 2s
 
 mybatis:
   configuration:

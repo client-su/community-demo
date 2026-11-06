@@ -36,6 +36,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Redis：登出黑名单、后续的计数与限流 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- JJWT：签发/验签。api 编译期可见，impl 与 jackson 仅运行期需要 -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

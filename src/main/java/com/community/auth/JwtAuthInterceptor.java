@@ -2,6 +2,7 @@ package com.community.auth;
 
 import com.community.common.BizException;
 import com.community.common.ErrorCode;
+import com.community.common.SecurityRedisService;
 import com.community.common.UserContext;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -22,10 +23,15 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     private static final String HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final JwtService jwtService;
+    /** Controller 需要 jti/exp 时从这里取（如登出） */
+    public static final String PAYLOAD_ATTRIBUTE = "jwtPayload";
 
-    public JwtAuthInterceptor(JwtService jwtService) {
+    private final JwtService jwtService;
+    private final SecurityRedisService securityRedisService;
+
+    public JwtAuthInterceptor(JwtService jwtService, SecurityRedisService securityRedisService) {
         this.jwtService = jwtService;
+        this.securityRedisService = securityRedisService;
     }
 
     @Override
@@ -51,7 +57,14 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
             throw new BizException(ErrorCode.UNAUTHORIZED, "无效的登录凭证");
         }
 
+        // 验签通过后再查黑名单：先挡掉伪造请求，避免拿垃圾 token 打 Redis
+        if (securityRedisService.isBlacklisted(payload.jti())) {
+            throw new BizException(ErrorCode.UNAUTHORIZED, "登录已失效，请重新登录");
+        }
+
         UserContext.set(payload.userId());
+        // 把整张票交给后面：登出需要 jti 与 exp，光有 userId 表达不了"注销哪张票"
+        request.setAttribute(PAYLOAD_ATTRIBUTE, payload);
         return true;
     }
 
