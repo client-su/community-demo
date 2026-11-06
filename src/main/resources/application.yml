@@ -25,6 +25,12 @@ app:
   security:
     # BCrypt 成本因子：每 +1 计算量翻倍。10 约 50-100ms/次
     bcrypt-strength: 10
+  jwt:
+    # HS256 要求密钥 >= 256 bit（32 字节）。生产必须用 JWT_SECRET 环境变量覆盖
+    secret: ${JWT_SECRET:HqqXRUygiLhMHLgFj2WxSIq18ZXQBkXHqKKf9MAmnn8=}
+    issuer: community
+    # 短期令牌：泄漏窗口有限；配 jti 可做登出黑名单
+    ttl: 2h
 
 server:
   port: 8080
