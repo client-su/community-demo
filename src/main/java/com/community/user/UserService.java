@@ -4,7 +4,10 @@ import com.community.common.BizException;
 import com.community.common.ErrorCode;
 import com.community.common.UserContext;
 import com.community.user.dto.ProfileVO;
+import com.community.user.dto.UpdateProfileRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class UserService {
@@ -31,6 +34,35 @@ public class UserService {
         if (!user.isActive()) {
             throw new BizException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }
+
+        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
+    }
+
+    /**
+     * 部分更新：null 表示不修改。
+     *
+     * <p>一个字段都没传时返回 400 而不是“假装成功”——
+     * 否则客户端把 nickname 拼成 nickName 时会拿到 200，问题被隐藏。
+     */
+    @Transactional
+    public ProfileVO updateCurrentProfile(UpdateProfileRequest request) {
+        long userId = UserContext.require();
+
+        if (request.isEmpty()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "至少提供一个要更新的字段");
+        }
+
+        String nickname = request.nickname().trim();
+        if (!StringUtils.hasText(nickname)) {
+            // @Size(min=1) 拦不住空白字符，必须 trim 后再判
+            throw new BizException(ErrorCode.BAD_REQUEST, "nickname 不能为空白");
+        }
+
+        User user = userMapper.findById(userId)
+                .orElseThrow(() -> new BizException(ErrorCode.UNAUTHORIZED, "账号不存在，请重新登录"));
+
+        userMapper.updateNickname(userId, nickname);
+        user.setNickname(nickname);
 
         return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
     }

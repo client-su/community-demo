@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.Optional;
 
@@ -44,4 +45,8 @@ public interface UserMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(User user);
+
+    /** updated_at 由数据库的 ON UPDATE CURRENT_TIMESTAMP 自动维护 */
+    @Update("UPDATE `user` SET nickname = #{nickname} WHERE id = #{id}")
+    int updateNickname(@Param("id") Long id, @Param("nickname") String nickname);
 }
