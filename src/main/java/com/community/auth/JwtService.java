@@ -80,4 +80,9 @@ public class JwtService {
     public long userIdOf(String token) {
         return Long.parseLong(parse(token).getPayload().getSubject());
     }
+
+    /** 验签并返回结构化载荷：鉴权拦截器用它拿到 userId 与 jti */
+    public JwtPayload parsePayload(String token) {
+        return JwtPayload.from(parse(token).getPayload());
+    }
 }
