@@ -28,4 +28,14 @@ public class DemoController {
     public Result<Void> fail() {
         return Result.fail(ErrorCode.USERNAME_EXISTS);
     }
+
+    @GetMapping("/biz")
+    public Result<Void> biz() {
+        throw new BizException(ErrorCode.USERNAME_EXISTS);
+    }
+
+    @GetMapping("/biz-custom")
+    public Result<Void> bizCustom() {
+        throw new BizException(ErrorCode.BAD_REQUEST, "用户名长度需 4-32 位");
+    }
 }
