@@ -1,5 +1,7 @@
 package com.community.auth;
 
+import com.community.auth.dto.LoginRequest;
+import com.community.auth.dto.LoginResponse;
 import com.community.auth.dto.RegisterRequest;
 import com.community.auth.dto.UserVO;
 import com.community.common.Result;
@@ -26,5 +28,10 @@ public class AuthController {
     public ResponseEntity<Result<UserVO>> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Result.ok(authService.register(request)));
+    }
+
+    @PostMapping("/login")
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        return Result.ok(authService.login(request));
     }
 }
