@@ -23,6 +23,8 @@ public enum ErrorCode {
     NOT_FOUND(40400, "请求的资源不存在", HttpStatus.NOT_FOUND),
     CONTENT_NOT_FOUND(40401, "内容不存在或已删除", HttpStatus.NOT_FOUND),
 
+    METHOD_NOT_ALLOWED(40500, "请求方法不支持", HttpStatus.METHOD_NOT_ALLOWED),
+
     CONFLICT(40900, "资源冲突", HttpStatus.CONFLICT),
     USERNAME_EXISTS(40901, "用户名已被占用", HttpStatus.CONFLICT),
     ALREADY_LIKED(40902, "已经点过赞了", HttpStatus.CONFLICT),
