@@ -2,7 +2,6 @@ package com.community.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -33,15 +32,12 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    /** 与第 4 个知识点的 TraceIdFilter 共用的 MDC key，第 4 步会收敛到 TraceId 工具类 */
-    private static final String TRACE_ID_KEY = "traceId";
-
     /** 业务异常：错误码里已经带好 HTTP 状态码，直接用 */
     @ExceptionHandler(BizException.class)
     public ResponseEntity<Result<Void>> handleBiz(BizException ex) {
         ErrorCode errorCode = ex.getErrorCode();
         log.warn("biz-error traceId={} code={} message={}",
-                MDC.get(TRACE_ID_KEY), errorCode.getCode(), ex.getMessage());
+                TraceId.current(), errorCode.getCode(), ex.getMessage());
         return ResponseEntity.status(errorCode.getHttpStatus())
                 .body(Result.fail(errorCode, ex.getMessage()));
     }
@@ -72,14 +68,14 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<Result<Void>> handleBadRequest(Exception ex) {
         log.warn("bad-request traceId={} type={} message={}",
-                MDC.get(TRACE_ID_KEY), ex.getClass().getSimpleName(), ex.getMessage());
+                TraceId.current(), ex.getClass().getSimpleName(), ex.getMessage());
         return badRequest(ErrorCode.BAD_REQUEST.getMessage());
     }
 
     /** 唯一键冲突：由数据库保护兜底，转成 409 而不是 500 */
     @ExceptionHandler(DuplicateKeyException.class)
     public ResponseEntity<Result<Void>> handleDuplicateKey(DuplicateKeyException ex) {
-        log.warn("duplicate-key traceId={} message={}", MDC.get(TRACE_ID_KEY), ex.getMessage());
+        log.warn("duplicate-key traceId={} message={}", TraceId.current(), ex.getMessage());
         return ResponseEntity.status(ErrorCode.CONFLICT.getHttpStatus())
                 .body(Result.fail(ErrorCode.CONFLICT));
     }
@@ -87,7 +83,7 @@ public class GlobalExceptionHandler {
     /** 路径不存在：Spring 6.1+ 对未匹配路由抛 NoResourceFoundException */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Result<Void>> handleNotFound(NoResourceFoundException ex) {
-        log.warn("not-found traceId={} path={}", MDC.get(TRACE_ID_KEY), ex.getResourcePath());
+        log.warn("not-found traceId={} path={}", TraceId.current(), ex.getResourcePath());
         return ResponseEntity.status(ErrorCode.NOT_FOUND.getHttpStatus())
                 .body(Result.fail(ErrorCode.NOT_FOUND));
     }
@@ -101,7 +97,7 @@ public class GlobalExceptionHandler {
     /** 兜底：任何未预期的异常都不把细节返回给客户端 */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleUnknown(Exception ex) {
-        log.error("unhandled-error traceId={}", MDC.get(TRACE_ID_KEY), ex);
+        log.error("unhandled-error traceId={}", TraceId.current(), ex);
         return ResponseEntity.status(ErrorCode.INTERNAL_ERROR.getHttpStatus())
                 .body(Result.fail(ErrorCode.INTERNAL_ERROR));
     }

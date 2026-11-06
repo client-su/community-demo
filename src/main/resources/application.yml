@@ -24,6 +24,11 @@ mybatis:
 server:
   port: 8080
 
+logging:
+  pattern:
+    # %X{traceId:-} 从 MDC 取值：TraceIdFilter 写入后，同一请求的每条日志都会带上它
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-no-trace}] [%thread] %logger{36} - %msg%n"
+
 management:
   health:
     # 让 /actuator/health 包含 db 组件：数据库连不上时状态变 DOWN
