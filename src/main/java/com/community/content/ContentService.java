@@ -3,13 +3,18 @@ package com.community.content;
 import com.community.common.UserContext;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
+import com.community.content.dto.PageResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class ContentService {
+
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 50;
 
     private final ContentMapper contentMapper;
 
@@ -42,5 +47,32 @@ public class ContentService {
         Content saved = contentMapper.findVisibleById(content.getId()).orElseThrow();
 
         return new ContentVO(saved.getId(), saved.getUserId(), saved.getBody(), saved.getCreatedAt());
+    }
+
+    /**
+     * 信息流：游标分页。
+     *
+     * <p>多查一条用于判断 hasMore，比对全表 COUNT(*) 便宜得多。
+     * size 必须夹紧上限，否则 size=100000 等于一次拉全表。
+     */
+    public PageResponse<ContentVO> feed(Long cursor, Integer size) {
+        int limit = (size == null || size < 1) ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+        long effectiveCursor = (cursor == null) ? Long.MAX_VALUE : cursor;
+
+        List<Content> rows = contentMapper.page(effectiveCursor, limit + 1);
+
+        boolean hasMore = rows.size() > limit;
+        if (hasMore) {
+            rows = rows.subList(0, limit);
+        }
+
+        List<ContentVO> items = rows.stream()
+                .map(c -> new ContentVO(c.getId(), c.getUserId(), c.getBody(), c.getCreatedAt()))
+                .toList();
+
+        // 只有还有下一页才给游标：否则客户端拿无效游标继续翻，会白跑一次
+        Long nextCursor = hasMore ? rows.get(rows.size() - 1).getId() : null;
+
+        return new PageResponse<>(items, nextCursor, hasMore);
     }
 }

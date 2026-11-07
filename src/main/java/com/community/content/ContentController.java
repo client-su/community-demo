@@ -3,12 +3,15 @@ package com.community.content;
 import com.community.common.Result;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
+import com.community.content.dto.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,5 +28,13 @@ public class ContentController {
     public ResponseEntity<Result<ContentVO>> publish(@Valid @RequestBody CreateContentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Result.ok(contentService.publish(request)));
+    }
+
+    /** 游标分页：不传 cursor 即第一页；下一页用上一页返回的 nextCursor */
+    @GetMapping
+    public Result<PageResponse<ContentVO>> feed(
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.ok(contentService.feed(cursor, size));
     }
 }
