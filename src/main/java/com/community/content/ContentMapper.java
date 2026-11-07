@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,4 +45,19 @@ public interface ContentMapper {
              LIMIT #{size}
             """)
     List<Content> page(@Param("cursor") long cursor, @Param("size") int size);
+
+    /**
+     * 软删：存在性 + 归属 + 未删 三重校验一次性完成。
+     *
+     * <p>不写“先查再判”是因为那会引入 TOCTOU 竞态窗口；
+     * 返回 0 行即代表“不存在 / 不是你的 / 已删”三者之一，调用方统一当 404。
+     */
+    @Update("""
+            UPDATE `content`
+               SET deleted = 1
+             WHERE id = #{id}
+               AND user_id = #{userId}
+               AND deleted = 0
+            """)
+    int softDeleteOwnedBy(@Param("id") long id, @Param("userId") long userId);
 }

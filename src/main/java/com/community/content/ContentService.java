@@ -141,8 +141,29 @@ public class ContentService {
         return vo;
     }
 
-    private String toJson(ContentVO vo) {
-        try {
+    /**
+     * 逻辑删除，只能删自己的。
+     *
+     * <p>“不存在 / 不是你的 / 已删除”三种情况返回同一个 404——
+     * 否则攻击者可以靠“403 还是 404”枚举出哪些 id 真实存在。
+     *
+     * <p>先更新库、再删缓存：缓存删早了，并发读可能把旧值又写回去。
+     */
+    @Transactional
+    public void delete(long id) {
+        long userId = UserContext.require();
+
+        int affected = contentMapper.softDeleteOwnedBy(id, userId);
+        if (affected == 0) {
+            log.info("删除失败（不存在/非本人/已删），统一返回 404, id={}, userId={}", id, userId);
+            throw new BizException(ErrorCode.CONTENT_NOT_FOUND);
+        }
+
+        redis.delete(cacheKey(id));
+        log.info("内容已软删并清理缓存, id={}, userId={}", id, userId);
+    }
+
+    private String toJson(ContentVO vo) {        try {
             return objectMapper.writeValueAsString(vo);
         } catch (JsonProcessingException e) {
             // 序列化失败不应影响主流程：当作“不缓存”处理
