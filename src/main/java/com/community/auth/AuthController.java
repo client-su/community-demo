@@ -4,6 +4,7 @@ import com.community.auth.dto.LoginRequest;
 import com.community.auth.dto.LoginResponse;
 import com.community.auth.dto.RegisterRequest;
 import com.community.auth.dto.UserVO;
+import com.community.common.RateLimit;
 import com.community.common.Result;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,8 @@ public class AuthController {
                 .body(Result.ok(authService.register(request)));
     }
 
+    /** 登录：按 IP 限流，防密码爆破（未认证时还没有 userId） */
+    @RateLimit(action = "login", limit = 5, windowSeconds = 60, by = RateLimit.Subject.IP)
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.ok(authService.login(request));

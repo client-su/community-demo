@@ -4,7 +4,6 @@ import com.community.auth.JwtAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
 /**
  * MVC 配置：集中声明"哪些路径需要登录"。
  *
@@ -15,9 +14,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final JwtAuthInterceptor jwtAuthInterceptor;
+    private final RateLimitInterceptor rateLimitInterceptor;
 
-    public WebConfig(JwtAuthInterceptor jwtAuthInterceptor) {
+    public WebConfig(JwtAuthInterceptor jwtAuthInterceptor, RateLimitInterceptor rateLimitInterceptor) {
         this.jwtAuthInterceptor = jwtAuthInterceptor;
+        this.rateLimitInterceptor = rateLimitInterceptor;
     }
 
     @Override
@@ -29,5 +30,10 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/auth/login",      // 登录当然不需要登录
                         "/error"                // 容器错误转发，拦了会把 401 变成 500
                 );
+
+        // 顺序很重要：先鉴权填 UserContext，再限流（by=USER 才能拿到 userId）
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/error");
     }
 }
