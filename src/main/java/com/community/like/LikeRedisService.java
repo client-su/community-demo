@@ -70,4 +70,16 @@ public class LikeRedisService {
     public void deleteCache(long contentId) {
         redis.delete(key(contentId));
     }
+
+    /** 用 DB 的点赞者列表重建集合（回源），返回重建的成员数 */
+    public long rebuild(long contentId, java.util.Collection<Long> userIds) {
+        deleteCache(contentId);
+        if (userIds == null || userIds.isEmpty()) {
+            return 0;
+        }
+        String[] members = userIds.stream().map(String::valueOf).toArray(String[]::new);
+        Long added = redis.opsForSet().add(key(contentId), members);
+        redis.expire(key(contentId), TTL);
+        return added == null ? 0 : added;
+    }
 }

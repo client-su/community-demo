@@ -93,9 +93,36 @@ public class LikeService {
         }
     }
 
-    /** 以数据库为准返回当前状态 */
-    private LikeResult currentState(long contentId, boolean liked) {
+    /**
+     * 查询"我是否赞过 + 当前赞数"。
+     *
+     * <p>read-through：集合不存在说明缓存丢了，先回源 DB 重建；
+     * Redis 完全不可用时退回直接查 DB —— 接口必须能用。
+     */
+    public LikeResult state(long contentId) {
+        long userId = UserContext.require();
         Content content = contentMapper.findVisibleById(contentId)
+                .orElseThrow(() -> new BizException(ErrorCode.CONTENT_NOT_FOUND));
+
+        boolean liked;
+        try {
+            if (!likeRedis.hasCache(contentId)) {
+                long rebuilt = likeRedis.rebuild(contentId, likeMapper.findUserIdsByContent(contentId));
+                log.info("点赞集合缺失，已从 DB 重建, contentId={}, members={}", contentId, rebuilt);
+            }
+            liked = likeRedis.isLiked(contentId, userId);
+        } catch (RuntimeException ex) {
+            // 降级：Redis 不可用也要能回答"我赞过吗"
+            log.warn("Redis 不可用，回源 DB 判断点赞状态, contentId={}, userId={}", contentId, userId, ex);
+            liked = likeMapper.exists(userId, contentId);
+        }
+
+        long count = content.getLikeCount() == null ? 0 : content.getLikeCount();
+        return new LikeResult(contentId, liked, count);
+    }
+
+    /** 以数据库为准返回当前状态 */
+    private LikeResult currentState(long contentId, boolean liked) {        Content content = contentMapper.findVisibleById(contentId)
                 .orElseThrow(() -> new BizException(ErrorCode.CONTENT_NOT_FOUND));
         long count = content.getLikeCount() == null ? 0 : content.getLikeCount();
         return new LikeResult(contentId, liked, count);

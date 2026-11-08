@@ -67,6 +67,12 @@ public class ContentController {
         return Result.ok(likeService.unlike(id));
     }
 
+    /** 查询点赞状态：前端用 liked 渲染按钮，用 likeCount 渲染数字 */
+    @GetMapping("/{id}/like")
+    public Result<LikeResult> likeState(@PathVariable long id) {
+        return Result.ok(likeService.state(id));
+    }
+
     /** 热榜：Top N 内容 */
     @GetMapping("/hot")
     public Result<List<ContentVO>> hot(@RequestParam(defaultValue = "10") int limit) {

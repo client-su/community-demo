@@ -45,4 +45,8 @@ public interface LikeMapper {
             )
             """)
     boolean exists(@Param("userId") long userId, @Param("contentId") long contentId);
+
+    /** 重建 Redis 集合用：把某内容的全部点赞者捞出来 */
+    @Select("SELECT user_id FROM `content_like` WHERE content_id = #{contentId}")
+    java.util.List<Long> findUserIdsByContent(@Param("contentId") long contentId);
 }

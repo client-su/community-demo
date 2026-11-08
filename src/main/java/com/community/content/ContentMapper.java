@@ -90,4 +90,15 @@ public interface ContentMapper {
                AND deleted = 0
             """)
     int addLikeCount(@Param("id") long id, @Param("delta") int delta);
+
+    /** 热榜重建用：按赞数取 Top N（走 idx_deleted_id 过滤 + 文件排序，低频调用可接受） */
+    @Select("""
+            SELECT id, user_id, body, like_count, created_at, updated_at
+              FROM `content`
+             WHERE deleted = 0
+               AND like_count > 0
+             ORDER BY like_count DESC, id DESC
+             LIMIT #{limit}
+            """)
+    List<Content> topByLikeCount(@Param("limit") int limit);
 }

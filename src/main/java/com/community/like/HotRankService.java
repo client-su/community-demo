@@ -62,4 +62,22 @@ public class HotRankService {
             redis.opsForZSet().remove(KEY, String.valueOf(contentId));
         }
     }
+
+    /** 榜单是否存在（空集合会被 Redis 删掉） */
+    public boolean hasData() {
+        Long size = redis.opsForZSet().zCard(KEY);
+        return size != null && size > 0;
+    }
+
+    /** 用 DB 的赞数整体重建榜单 */
+    public void rebuild(java.util.Map<Long, Long> scores) {
+        redis.delete(KEY);
+        if (scores == null || scores.isEmpty()) {
+            return;
+        }
+        Set<ZSetOperations.TypedTuple<String>> tuples = new java.util.HashSet<>();
+        scores.forEach((id, score) -> tuples.add(
+                ZSetOperations.TypedTuple.of(String.valueOf(id), score.doubleValue())));
+        redis.opsForZSet().add(KEY, tuples);
+    }
 }

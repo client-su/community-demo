@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +30,8 @@ public class ContentService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 50;
+    /** 重建榜单时最多回源多少条 */
+    private static final int HOT_REBUILD_LIMIT = 500;
 
     private static final String DETAIL_KEY_PREFIX = "content:detail:";
     /** 热点数据 10 分钟：读多写少，同时作为一致性的兜底窗口 */
@@ -179,6 +182,12 @@ public class ContentService {
      */
     public List<ContentVO> hot(int limit) {
         int topN = Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
+
+        // 榜单缓存丢了就重建：这是“Redis 只是缓存”的最终证明
+        if (!hotRankService.hasData()) {
+            rebuildHotRank();
+        }
+
         List<Long> ids = hotRankService.topIds(topN);
         if (ids.isEmpty()) {
             return List.of();
@@ -199,9 +208,22 @@ public class ContentService {
         return result;
     }
 
+    /** 从 DB 按赞数重建热榜（低频操作，只在缓存丢失时触发） */
+    private void rebuildHotRank() {
+        List<Content> top = contentMapper.topByLikeCount(HOT_REBUILD_LIMIT);
+        Map<Long, Long> scores = new LinkedHashMap<>();
+        for (Content c : top) {
+            long count = c.getLikeCount() == null ? 0 : c.getLikeCount();
+            if (count > 0) {
+                scores.put(c.getId(), count);
+            }
+        }
+        hotRankService.rebuild(scores);
+        log.info("热榜缓存为空，已从 DB 重建 {} 条", scores.size());
+    }
+
     private String toJson(ContentVO vo) {
-        try {
-            return objectMapper.writeValueAsString(vo);
+        try {            return objectMapper.writeValueAsString(vo);
         } catch (JsonProcessingException e) {
             // 序列化失败不应影响主流程：当作“不缓存”处理
             log.warn("detail 序列化失败，跳过缓存, id={}", vo.id(), e);
