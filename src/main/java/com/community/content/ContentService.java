@@ -6,11 +6,13 @@ import com.community.common.UserContext;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
 import com.community.content.dto.PageResponse;
+import com.community.content.dto.PublishResult;
 import com.community.like.HotRankService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +42,13 @@ public class ContentService {
     /** 空值标记的短 TTL：防缓存穿透，同时不让“后来真的有了”等太久 */
     private static final Duration NULL_TTL = Duration.ofSeconds(60);
     private static final String NULL_MARKER = "__NULL__";
+
+    private static final String IDEM_KEY_PREFIX = "idem:content:";
+    /** 处理中标记：覆盖一次请求的最大耗时，崩溃后能自动释放 */
+    private static final Duration IDEM_LOCK_TTL = Duration.ofSeconds(30);
+    /** 完成后保留 24 小时，让重试能命中"已完成" */
+    private static final Duration IDEM_DONE_TTL = Duration.ofHours(24);
+    private static final Pattern IDEM_KEY_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{8,64}$");
 
     private final ContentMapper contentMapper;
     private final StringRedisTemplate redis;
@@ -64,29 +74,74 @@ public class ContentService {
     /**
      * 发布内容。
      *
+     * <p>幂等三层：
+     * ① Redis SETNX 抢占，挡住并发重复请求；
+     * ② 数据库唯一键 uk_user_idem 是最终真相；
+     * ③ 重放时回查并返回同一条，而不是报错。
+     *
      * <p>作者来自 {@link UserContext}，不接受外部传入的 userId。
-     * 幂等键暂时由服务端生成（保证 (user_id, idem_key) 不冲突），
-     * 第 8 步改为客户端提供，并用它把"重复提交"变成"返回同一条内容"。
      */
     @Transactional
-    public ContentVO publish(CreateContentRequest request) {
+    public PublishResult publish(CreateContentRequest request, String rawIdemKey) {
         long userId = UserContext.require();
+        String idemKey = normalizeIdemKey(rawIdemKey);
 
-        Content content = new Content();
-        content.setUserId(userId);
-        content.setIdemKey("srv-" + UUID.randomUUID());
-        content.setBody(request.body().trim());
-        content.setDeleted(Content.NOT_DELETED);
+        String redisKey = IDEM_KEY_PREFIX + userId + ":" + idemKey;
+        boolean acquired = Boolean.TRUE.equals(
+                redis.opsForValue().setIfAbsent(redisKey, "processing", IDEM_LOCK_TTL));
+        if (!acquired) {
+            // 抢不到：可能正在处理，也可能已完成 —— 都要回查数据库才能回答
+            return new PublishResult(replay(userId, idemKey), false);
+        }
 
-        contentMapper.insert(content);
+        try {
+            Content content = new Content();
+            content.setUserId(userId);
+            content.setIdemKey(idemKey);
+            content.setBody(request.body().trim());
+            content.setDeleted(Content.NOT_DELETED);
 
-        // INSERT 只回填自增主键，created_at 由数据库默认值生成，拿不到。
-        // 回读一次（走主键）拿权威时间——比在 Java 里 LocalDateTime.now() 更可信，
-        // 也不会受应用与数据库时钟不一致影响。
-        Content saved = contentMapper.findVisibleById(content.getId()).orElseThrow();
+            contentMapper.insert(content);
 
-        return new ContentVO(saved.getId(), saved.getUserId(), saved.getBody(),
-                saved.getLikeCount(), saved.getCreatedAt());
+            // INSERT 只回填自增主键，created_at 由数据库默认值生成，拿不到。
+            // 回读一次（走主键）拿权威时间——比在 Java 里 LocalDateTime.now() 更可信，
+            // 也不会受应用与数据库时钟不一致影响。
+            Content saved = contentMapper.findVisibleById(content.getId()).orElseThrow();
+
+            // 标记完成：值为内容 id，TTL 拉长，重试可直接回查命中
+            redis.opsForValue().set(redisKey, String.valueOf(saved.getId()), IDEM_DONE_TTL);
+
+            return new PublishResult(toVO(saved), true);
+        } catch (DuplicateKeyException ex) {
+            // Redis 没拦住（或抢到后崩溃）时的兜底：唯一键挡下了重复
+            log.info("幂等键冲突，返回已存在的内容, userId={}, idemKey={}", userId, idemKey);
+            return new PublishResult(replay(userId, idemKey), false);
+        }
+    }
+
+    /** 幂等重放：返回之前那条；找不到说明第一次请求还在处理中 */
+    private ContentVO replay(long userId, String idemKey) {
+        Content existing = contentMapper.findByUserIdAndIdemKey(userId, idemKey)
+                .orElseThrow(() -> new BizException(ErrorCode.CONFLICT,
+                        "相同幂等键的请求正在处理中，请稍后重试"));
+        if (existing.getDeleted() != null && existing.getDeleted() == Content.DELETED) {
+            // 已删除的内容不能"重放成功"，否则用户以为发布生效了
+            throw new BizException(ErrorCode.CONFLICT, "该幂等键对应的内容已被删除，请使用新的幂等键");
+        }
+        return toVO(existing);
+    }
+
+    /** 没传就用服务端随机键（退化为"无幂等"）；传了必须合法，否则拒绝 */
+    private String normalizeIdemKey(String rawIdemKey) {
+        if (rawIdemKey == null || rawIdemKey.isBlank()) {
+            return "srv-" + UUID.randomUUID();
+        }
+        String key = rawIdemKey.trim();
+        if (!IDEM_KEY_PATTERN.matcher(key).matches()) {
+            throw new BizException(ErrorCode.BAD_REQUEST,
+                    "Idempotency-Key 只能包含字母、数字、下划线与连字符，长度 8-64");
+        }
+        return key;
     }
 
     /**

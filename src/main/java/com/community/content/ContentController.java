@@ -4,6 +4,7 @@ import com.community.common.Result;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
 import com.community.content.dto.PageResponse;
+import com.community.content.dto.PublishResult;
 import com.community.like.LikeService;
 import com.community.like.dto.LikeResult;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,9 +34,13 @@ public class ContentController {
     }
 
     @PostMapping
-    public ResponseEntity<Result<ContentVO>> publish(@Valid @RequestBody CreateContentRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Result.ok(contentService.publish(request)));
+    public ResponseEntity<Result<ContentVO>> publish(
+            @Valid @RequestBody CreateContentRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idemKey) {
+        PublishResult result = contentService.publish(request, idemKey);
+        // 首次创建 201，幂等重放 200（客户端据此判断是不是新写的）
+        return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(Result.ok(result.content()));
     }
 
     /** 游标分页：不传 cursor 即第一页；下一页用上一页返回的 nextCursor */

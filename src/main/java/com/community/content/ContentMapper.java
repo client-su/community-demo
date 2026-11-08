@@ -74,6 +74,16 @@ public interface ContentMapper {
             """)
     List<Content> findVisibleByIds(@Param("ids") List<Long> ids);
 
+    /** 幂等重放查询：按 (user_id, idem_key) 定位唯一的那条 */
+    @Select("""
+            SELECT id, user_id, idem_key, body, deleted, like_count, created_at, updated_at
+              FROM `content`
+             WHERE user_id = #{userId}
+               AND idem_key = #{idemKey}
+            """)
+    Optional<Content> findByUserIdAndIdemKey(@Param("userId") long userId,
+                                             @Param("idemKey") String idemKey);
+
     /**
      * 计数加减，永不小于 0。
      *
