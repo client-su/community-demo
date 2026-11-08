@@ -25,11 +25,14 @@ public class LikeService {
     private final LikeMapper likeMapper;
     private final ContentMapper contentMapper;
     private final LikeRedisService likeRedis;
+    private final HotRankService hotRank;
 
-    public LikeService(LikeMapper likeMapper, ContentMapper contentMapper, LikeRedisService likeRedis) {
+    public LikeService(LikeMapper likeMapper, ContentMapper contentMapper,
+                       LikeRedisService likeRedis, HotRankService hotRank) {
         this.likeMapper = likeMapper;
         this.contentMapper = contentMapper;
         this.likeRedis = likeRedis;
+        this.hotRank = hotRank;
     }
 
     @Transactional
@@ -48,6 +51,10 @@ public class LikeService {
             likeRedis.add(contentId, userId);
         } catch (RuntimeException ex) {
             log.warn("Redis 维护失败（不影响点赞结果）, contentId={}, userId={}", contentId, userId, ex);
+        }
+
+        if (inserted == 1) {
+            updateHotRank(contentId, 1);
         }
 
         return currentState(contentId, true);
@@ -70,7 +77,20 @@ public class LikeService {
             log.warn("Redis 维护失败（不影响取消结果）, contentId={}, userId={}", contentId, userId, ex);
         }
 
+        if (deleted == 1) {
+            updateHotRank(contentId, -1);
+        }
+
         return currentState(contentId, false);
+    }
+
+    /** 热榜分数是“缓存”，失败不影响主流程 */
+    private void updateHotRank(long contentId, double delta) {
+        try {
+            hotRank.addScore(contentId, delta);
+        } catch (RuntimeException ex) {
+            log.warn("热榜更新失败（可由 DB 重建）, contentId={}, delta={}", contentId, delta, ex);
+        }
     }
 
     /** 以数据库为准返回当前状态 */

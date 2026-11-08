@@ -6,6 +6,7 @@ import com.community.common.UserContext;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
 import com.community.content.dto.PageResponse;
+import com.community.like.HotRankService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -15,8 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ContentService {
@@ -36,11 +40,14 @@ public class ContentService {
     private final ContentMapper contentMapper;
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
+    private final HotRankService hotRankService;
 
-    public ContentService(ContentMapper contentMapper, StringRedisTemplate redis, ObjectMapper objectMapper) {
+    public ContentService(ContentMapper contentMapper, StringRedisTemplate redis,
+                          ObjectMapper objectMapper, HotRankService hotRankService) {
         this.contentMapper = contentMapper;
         this.redis = redis;
         this.objectMapper = objectMapper;
+        this.hotRankService = hotRankService;
     }
 
     private ContentVO toVO(Content c) {
@@ -164,7 +171,36 @@ public class ContentService {
         log.info("内容已软删并清理缓存, id={}, userId={}", id, userId);
     }
 
-    private String toJson(ContentVO vo) {        try {
+    /**
+     * 热榜：id 顺序来自 Redis ZSet，内容本身仍要回表查（Redis 不存正文）。
+     *
+     * <p>ZSet 里可能残留已删除/已过期的 id，查不到的直接跳过，
+     * 用 LinkedHashMap 语义保证"返回顺序 = 榜单顺序"。
+     */
+    public List<ContentVO> hot(int limit) {
+        int topN = Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
+        List<Long> ids = hotRankService.topIds(topN);
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Content> found = contentMapper.findVisibleByIds(ids).stream()
+                .collect(Collectors.toMap(Content::getId, c -> c));
+
+        List<ContentVO> result = new ArrayList<>(ids.size());
+        for (Long id : ids) {
+            Content content = found.get(id);
+            if (content != null) {
+                result.add(toVO(content));
+            } else {
+                log.info("热榜中的内容已不可见，跳过, id={}", id);
+            }
+        }
+        return result;
+    }
+
+    private String toJson(ContentVO vo) {
+        try {
             return objectMapper.writeValueAsString(vo);
         } catch (JsonProcessingException e) {
             // 序列化失败不应影响主流程：当作“不缓存”处理

@@ -61,6 +61,19 @@ public interface ContentMapper {
             """)
     int softDeleteOwnedBy(@Param("id") long id, @Param("userId") long userId);
 
+    @Select("""
+            <script>
+            SELECT id, user_id, body, like_count, created_at, updated_at
+              FROM `content`
+             WHERE deleted = 0
+               AND id IN
+               <foreach item="id" collection="ids" open="(" separator="," close=")">
+                 #{id}
+               </foreach>
+            </script>
+            """)
+    List<Content> findVisibleByIds(@Param("ids") List<Long> ids);
+
     /**
      * 计数加减，永不小于 0。
      *
