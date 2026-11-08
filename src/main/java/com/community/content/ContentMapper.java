@@ -22,7 +22,7 @@ public interface ContentMapper {
 
     /** 详情：软删的内容视为不存在 */
     @Select("""
-            SELECT id, user_id, idem_key, body, deleted, created_at, updated_at
+            SELECT id, user_id, idem_key, body, deleted, like_count, created_at, updated_at
               FROM `content`
              WHERE id = #{id}
                AND deleted = 0
@@ -37,7 +37,7 @@ public interface ContentMapper {
      * cursor 传 Long.MAX_VALUE 表示第一页——用参数表达分支，避免动态 SQL。
      */
     @Select("""
-            SELECT id, user_id, body, created_at, updated_at
+            SELECT id, user_id, body, like_count, created_at, updated_at
               FROM `content`
              WHERE deleted = 0
                AND id < #{cursor}
@@ -60,4 +60,21 @@ public interface ContentMapper {
                AND deleted = 0
             """)
     int softDeleteOwnedBy(@Param("id") long id, @Param("userId") long userId);
+
+    /**
+     * 计数加减，永不小于 0。
+     *
+     * <p>like_count 是 INT UNSIGNED：直接 like_count - 1 在 0 时会报
+     * "BIGINT UNSIGNED value is out of range"（严格模式），所以先 CAST 成有符号再算，
+     * 最后用 GREATEST 夹到 0。
+     *
+     * @param delta +1 点赞 / -1 取消
+     */
+    @Update("""
+            UPDATE `content`
+               SET like_count = GREATEST(CAST(like_count AS SIGNED) + #{delta}, 0)
+             WHERE id = #{id}
+               AND deleted = 0
+            """)
+    int addLikeCount(@Param("id") long id, @Param("delta") int delta);
 }

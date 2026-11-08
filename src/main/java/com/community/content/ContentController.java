@@ -4,6 +4,8 @@ import com.community.common.Result;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
 import com.community.content.dto.PageResponse;
+import com.community.like.LikeService;
+import com.community.like.dto.LikeResult;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ContentController {
 
     private final ContentService contentService;
+    private final LikeService likeService;
 
-    public ContentController(ContentService contentService) {
+    public ContentController(ContentService contentService, LikeService likeService) {
         this.contentService = contentService;
+        this.likeService = likeService;
     }
 
     @PostMapping
@@ -50,5 +54,15 @@ public class ContentController {
     public Result<Void> delete(@PathVariable long id) {
         contentService.delete(id);
         return Result.ok();
+    }
+
+    @PostMapping("/{id}/like")
+    public Result<LikeResult> like(@PathVariable long id) {
+        return Result.ok(likeService.like(id));
+    }
+
+    @DeleteMapping("/{id}/like")
+    public Result<LikeResult> unlike(@PathVariable long id) {
+        return Result.ok(likeService.unlike(id));
     }
 }

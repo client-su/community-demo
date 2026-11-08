@@ -44,7 +44,7 @@ public class ContentService {
     }
 
     private ContentVO toVO(Content c) {
-        return new ContentVO(c.getId(), c.getUserId(), c.getBody(), c.getCreatedAt());
+        return new ContentVO(c.getId(), c.getUserId(), c.getBody(), c.getLikeCount(), c.getCreatedAt());
     }
 
     private String cacheKey(long id) {
@@ -75,7 +75,8 @@ public class ContentService {
         // 也不会受应用与数据库时钟不一致影响。
         Content saved = contentMapper.findVisibleById(content.getId()).orElseThrow();
 
-        return new ContentVO(saved.getId(), saved.getUserId(), saved.getBody(), saved.getCreatedAt());
+        return new ContentVO(saved.getId(), saved.getUserId(), saved.getBody(),
+                saved.getLikeCount(), saved.getCreatedAt());
     }
 
     /**
