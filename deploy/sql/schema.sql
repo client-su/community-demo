@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS `content` (
     `idem_key`   VARCHAR(64)     NOT NULL                COMMENT '幂等键，客户端生成，重试时复用',
     `body`       TEXT            NOT NULL                COMMENT '正文',
     `deleted`    TINYINT         NOT NULL DEFAULT 0      COMMENT '0 正常 / 1 已删（软删）',
+    `like_count` INT UNSIGNED    NOT NULL DEFAULT 0      COMMENT '点赞数，DB 为唯一真相',
     `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
