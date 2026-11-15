@@ -28,7 +28,6 @@
 - 首页：匿名可读信息流与热榜；点赞、发布需要登录
 - 右下角 **请求日志**：每次调用显示「方法 路径 状态码 traceId 耗时」，可以现场撞出 `429`、
   也能看到幂等重放返回的 `200`
-- 前端形态的取舍见 [docs/ARCHITECTURE.md §3.1](docs/ARCHITECTURE.md)
 
 ## 快速开始
 
@@ -81,9 +80,8 @@ community/
 │   ├── application.yml
 │   └── static/          前端页（同源托管，零构建）
 ├── src/test/java/com/community/   14 个测试类 / 50 个用例
-├── docs/
-│   ├── ARCHITECTURE.md  每条设计决策的问题、方案与代价
-│   └── API.md           13 个接口的完整契约
+├── ARCHITECTURE.md               每条设计决策的问题、方案与代价
+├── API.md                        13 个接口的完整契约
 ├── deploy/sql/
 │   ├── schema.sql       建表
 │   ├── seed-demo.sql    演示数据
@@ -96,7 +94,7 @@ community/
 
 ## 接口
 
-13 个接口，完整契约（请求体、响应体、错误码）见 [docs/API.md](docs/API.md)。
+13 个接口，完整契约（请求体、响应体、错误码）见 [API.md](API.md)。
 
 | 方法 | 路径 | 鉴权 | 说明 |
 | --- | --- | --- | --- |
@@ -136,9 +134,8 @@ mvn test
 
 ## 设计决策
 
-为什么用游标分页而不是 offset、为什么前端不单独建 Vue 工程、为什么不引 `starter-security`、
-为什么 `EXPIRE` 只在窗口首个请求设置——每条都按「问题 → 方案 → 代价」写在
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。没写代价的方案等于没评估过。
+游标分页、点赞幂等、空值缓存、限流窗口、Redis 降级等 10 条取舍，每条都按
+「问题 → 方案 → 代价」写在 [ARCHITECTURE.md](ARCHITECTURE.md)。没写代价的方案等于没评估过。
 
 ## 开发规范
 
@@ -147,12 +144,3 @@ mvn test
 ```bash
 git config core.hooksPath .githooks   # 首次 clone 后执行一次
 ```
-
-## 刻意不做的事
-
-| 不做 | 原因 |
-| --- | --- |
-| 部署上线 | 展示对象是代码可读性，不是运维能力；维护成本与收益不成比例 |
-| 独立前端工程 | 展示对象是后端，见 [ARCHITECTURE §3.1](docs/ARCHITECTURE.md) |
-| 评论 / 关注 / 搜索 | 与已展示的技术点重复（都是 CRUD + 分页），加量不加分 |
-| 分库分表 / 消息队列 | 数据量不支撑，引入只会是负分 |

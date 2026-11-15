@@ -23,7 +23,7 @@ cat >&2 <<'EOF'
     type(scope): 描述
 
   type   feat | fix | docs | refactor | test | chore | perf | build | revert
-  scope  模块名，小写字母/数字/连字符，如 auth、content、like、redis、docs
+  scope  模块名，小写字母/数字/连字符，如 auth、content、like、redis、web
   描述    冒号后空一格，写这次做了什么
 
 例：

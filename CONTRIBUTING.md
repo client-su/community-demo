@@ -18,7 +18,7 @@ type(scope): 描述
 ```
 
 - **type**：`feat` | `fix` | `docs` | `refactor` | `test` | `chore` | `perf` | `build` | `revert`
-- **scope**：模块名，小写字母 / 数字 / 连字符，例如 `auth`、`content`、`like`、`redis`、`docs`
+- **scope**：模块名，小写字母 / 数字 / 连字符，例如 `auth`、`content`、`like`、`redis`、`web`
 - **描述**：冒号后空一格，写"做了什么"，不要写"修改了一些东西"
 
 正确示例：
@@ -26,7 +26,7 @@ type(scope): 描述
 ```
 feat(auth): 注册接口与 BCrypt 密码存储
 fix(content): 修复游标分页在空结果时的越界
-docs(learning): 补充 01 工程骨架要点
+docs(api): 补充分页与幂等头说明
 ```
 
 被拒绝的示例（钩子会打印原因并中止提交）：
@@ -44,7 +44,7 @@ feat(auth):加功能         # 冒号后必须空一格
 | --- | --- | --- |
 | 新功能 | `feat/<scope>-<简述>` | `feat/auth-register` |
 | 修复 | `fix/<scope>-<简述>` | `fix/like-overflow` |
-| 文档 | `docs/<简述>` | `docs/learning-notes` |
+| 文档 | `docs/<简述>` | `docs/api-example` |
 
 `main` 保持可运行：合并前必须能 `mvn -q clean verify` 通过。
 
