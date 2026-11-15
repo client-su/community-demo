@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>社区 · 用户中心 + 内容社区</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="brand">社区<span>.</span></div>
+    <div class="auth-area" id="authArea"></div>
+</header>
+
+<main class="layout">
+    <section class="main-col">
+        <form class="card composer" id="composer">
+            <textarea id="composerBody" maxlength="2000" rows="3"
+                      placeholder="说点什么…（Ctrl / ⌘ + Enter 发布）"></textarea>
+            <div class="composer-foot">
+                <span class="hint" id="composerHint"></span>
+                <span class="counter"><span id="bodyCount">0</span>/2000</span>
+                <button type="submit" id="publishBtn" disabled>发布</button>
+            </div>
+        </form>
+
+        <div class="feed-head">
+            <h2>最新</h2>
+            <button type="button" class="ghost" id="refreshBtn">刷新</button>
+        </div>
+
+        <ul class="feed" id="feed"></ul>
+
+        <div class="feed-foot">
+            <button type="button" class="ghost" id="loadMoreBtn" hidden>加载更多</button>
+            <p class="empty" id="feedEmpty" hidden>还没有内容，登录后发第一条。</p>
+        </div>
+    </section>
+
+    <aside class="side-col">
+        <section class="card">
+            <h3>热榜 Top 10</h3>
+            <ol class="hot" id="hot"></ol>
+        </section>
+
+        <section class="card about">
+            <h3>关于</h3>
+            <p>Spring Boot 3 · MyBatis · MySQL · Redis</p>
+            <p class="muted tiny">JWT 鉴权 · 游标分页 · ZSet 热榜 · 固定窗口限流 · 幂等发布</p>
+            <p class="muted tiny">匿名可以浏览，点赞与发布需要登录。</p>
+        </section>
+    </aside>
+</main>
+
+<section class="reqpanel" id="reqPanel">
+    <header>
+        <strong>请求日志</strong>
+        <span class="muted tiny">每次调用都打一行：看看 429 与幂等重放</span>
+        <button type="button" class="ghost tiny" id="reqToggle">收起</button>
+    </header>
+    <ol id="reqLog"></ol>
+</section>
+
+<dialog id="authDialog" class="dialog">
+    <form class="dialog-head">
+        <h3 id="authTitle">登录</h3>
+        <button type="submit" class="ghost icon" aria-label="关闭">✕</button>
+    </form>
+    <form id="authForm" novalidate>
+        <label>用户名
+            <input name="username" autocomplete="username" placeholder="4-32 位字母数字下划线">
+        </label>
+        <label>密码
+            <input name="password" type="password" autocomplete="current-password" placeholder="8-64 位">
+        </label>
+        <label id="nicknameRow" hidden>昵称
+            <input name="nickname" autocomplete="nickname" placeholder="可选">
+        </label>
+        <p class="form-msg" id="authMsg"></p>
+        <div class="dialog-foot">
+            <button type="button" class="ghost" id="switchMode">去注册</button>
+            <button type="submit" id="authSubmit">登录</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="detailDialog" class="dialog">
+    <form class="dialog-head">
+        <h3>内容详情</h3>
+        <button type="submit" class="ghost icon" aria-label="关闭">✕</button>
+    </form>
+    <div id="detailBody"></div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
