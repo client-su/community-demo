@@ -1,0 +1,56 @@
+# 只起依赖（MySQL + Redis），不起应用。
+#
+# 应用仍用 mvn spring-boot:run 在本机跑：改一行 Java 不用重建镜像，
+# 也不需要把仓库打进容器——这是个用来被审阅的项目，启动路径越短越好。
+#
+#   docker compose up -d
+#   mvn spring-boot:run
+#
+# 端口被本机已有的 MySQL/Redis 占用时，用环境变量换端口：
+#   MYSQL_PORT=3307 REDIS_PORT=6380 docker compose up -d
+#   再让应用指过去：DB_PORT=3307 REDIS_PORT=6380 mvn spring-boot:run
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: community-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: community
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 只在数据卷为空（首次启动）时执行 schema.sql。
+      # 刻意不挂 seed-demo.sql：有数据的库会让 ContentMapperTest.cursorPagination
+      # （它假设 content 表为空）失败。想要演示数据就手动执行一次：
+      #   mysql -uroot -p < deploy/sql/seed-demo.sql
+      - ./deploy/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 25s
+
+  redis:
+    image: redis:7
+    container_name: community-redis
+    restart: unless-stopped
+    # 关掉持久化：Redis 在这里是可丢弃的加速层，丢了就从 MySQL 重建
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mysql-data:
