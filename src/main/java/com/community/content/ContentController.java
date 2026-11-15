@@ -1,5 +1,6 @@
 package com.community.content;
 
+import com.community.common.OptionalAuth;
 import com.community.common.Result;
 import com.community.content.dto.ContentVO;
 import com.community.content.dto.CreateContentRequest;
@@ -9,7 +10,8 @@ import com.community.like.LikeService;
 import com.community.like.dto.LikeResult;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,6 +46,7 @@ public class ContentController {
     }
 
     /** 游标分页：不传 cursor 即第一页；下一页用上一页返回的 nextCursor */
+    @OptionalAuth
     @GetMapping
     public Result<PageResponse<ContentVO>> feed(
             @RequestParam(required = false) Long cursor,
@@ -51,6 +54,7 @@ public class ContentController {
         return Result.ok(contentService.feed(cursor, size));
     }
 
+    @OptionalAuth
     @GetMapping("/{id}")
     public Result<ContentVO> detail(@PathVariable long id) {
         return Result.ok(contentService.detail(id));
@@ -80,6 +84,7 @@ public class ContentController {
     }
 
     /** 热榜：Top N 内容 */
+    @OptionalAuth
     @GetMapping("/hot")
     public Result<List<ContentVO>> hot(@RequestParam(defaultValue = "10") int limit) {
         return Result.ok(contentService.hot(limit));

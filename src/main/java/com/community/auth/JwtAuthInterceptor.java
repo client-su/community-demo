@@ -2,6 +2,7 @@ package com.community.auth;
 
 import com.community.common.BizException;
 import com.community.common.ErrorCode;
+import com.community.common.OptionalAuth;
 import com.community.common.SecurityRedisService;
 import com.community.common.UserContext;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -9,6 +10,7 @@ import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
@@ -43,6 +45,12 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
         String header = request.getHeader(HEADER);
         if (header == null || !header.startsWith(BEARER_PREFIX)) {
+            // 标了 @OptionalAuth 的只读接口允许匿名：不填 UserContext，下游按"未登录"处理。
+            // 只有"没带票"能放行；"带了坏票"在下面照样 401，静默降级成匿名会让前端
+            // 出现"已登录却没有身份"的状态，反而没法判断该不该重新登录。
+            if (isOptionalAuth(handler)) {
+                return true;
+            }
             throw new BizException(ErrorCode.UNAUTHORIZED, "缺少 Bearer 令牌");
         }
 
@@ -73,5 +81,18 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                                 Object handler, Exception ex) {
         // 自己 set 的值自己清，不依赖 Filter 的清理顺序
         UserContext.clear();
+    }
+
+    /**
+     * 注解写在接口方法上，白名单跟着接口走。
+     *
+     * <p>不用 WebConfig 的 excludePathPatterns：那条路是"按路径排除"，只认路径不认方法，
+     * 而 /api/contents 同一路径上既有匿名可读的 GET，也有必须登录的 POST，按路径排除会误伤写接口。
+     */
+    private boolean isOptionalAuth(Object handler) {
+        if (!(handler instanceof HandlerMethod handlerMethod)) {
+            return false;
+        }
+        return handlerMethod.hasMethodAnnotation(OptionalAuth.class);
     }
 }
