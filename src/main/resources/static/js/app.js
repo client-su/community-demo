@@ -20,6 +20,7 @@ const el = {
     publishBtn: document.querySelector('#publishBtn'),
     feed: document.querySelector('#feed'),
     feedEmpty: document.querySelector('#feedEmpty'),
+    emptyAction: document.querySelector('#emptyAction'),
     loadMoreBtn: document.querySelector('#loadMoreBtn'),
     refreshBtn: document.querySelector('#refreshBtn'),
     hot: document.querySelector('#hot'),
@@ -162,6 +163,7 @@ function renderComposer() {
     const loggedIn = Boolean(state.me);
     el.publishBtn.disabled = !loggedIn;
     el.composerHint.replaceChildren();
+    el.emptyAction.textContent = loggedIn ? '写第一条' : '登录后发布';
 
     if (loggedIn) {
         el.composerHint.textContent = '同一份草稿重复发布只会创建一条（幂等键）';
@@ -272,13 +274,22 @@ function postEl(item) {
 
     const head = document.createElement('div');
     head.className = 'post-head';
+
+    // 接口只返回 userId，没有头像与昵称，所以头像里放编号，不编造不存在的字段
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar';
+    avatar.textContent = String(item.userId);
+
+    const meta = document.createElement('div');
+    meta.className = 'post-meta';
     const who = document.createElement('span');
     who.className = 'who';
     who.textContent = `用户 #${item.userId}`;
     const time = document.createElement('time');
-    time.className = 'muted tiny';
+    time.className = 'tiny muted';
     time.textContent = formatTime(item.createdAt);
-    head.append(who, time);
+    meta.append(who, time);
+    head.append(avatar, meta);
 
     const body = document.createElement('p');
     body.className = 'post-body';
@@ -380,6 +391,14 @@ el.refreshBtn.addEventListener('click', () => {
     loadHot();
 });
 
+el.emptyAction.addEventListener('click', () => {
+    if (state.me) {
+        el.composerBody.focus();
+        return;
+    }
+    openAuth('login', '登录后就可以发布第一条内容');
+});
+
 /* ---------------- 发布 ---------------- */
 
 /**
@@ -438,6 +457,7 @@ async function loadHot() {
             el.hot.innerHTML = '<li class="muted tiny">还没有点赞数据</li>';
             return;
         }
+        const maxLikes = Math.max(1, ...items.map((item) => item.likeCount ?? 0));
         el.hot.replaceChildren(...items.map((item, index) => {
             const li = document.createElement('li');
             const button = document.createElement('button');
@@ -448,15 +468,27 @@ async function loadHot() {
             rank.className = 'rank';
             rank.textContent = String(index + 1);
 
+            const body = document.createElement('span');
+            body.className = 'hot-body';
+
             const text = document.createElement('span');
             text.className = 'hot-text';
             text.textContent = truncate(item.body, 22);
 
+            const bar = document.createElement('span');
+            bar.className = 'hot-bar';
+            const fill = document.createElement('i');
+            const likes = item.likeCount ?? 0;
+            // 条形按「相对第一名」画，0 赞也留 6% 基线，免得看成空进度条
+            fill.style.width = `${Math.max(6, Math.round((likes / maxLikes) * 100))}%`;
+            bar.append(fill);
+            body.append(text, bar);
+
             const count = document.createElement('span');
             count.className = 'hot-count';
-            count.textContent = `${item.likeCount ?? 0} 赞`;
+            count.textContent = `${likes} 赞`;
 
-            button.append(rank, text, count);
+            button.append(rank, body, count);
             button.addEventListener('click', () => showDetail(item.id));
             li.append(button);
             return li;

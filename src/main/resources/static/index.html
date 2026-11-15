@@ -9,12 +9,27 @@
 <body>
 
 <header class="topbar">
-    <div class="brand">社区<span>.</span></div>
-    <div class="auth-area" id="authArea"></div>
+    <div class="topbar-inner">
+        <div class="brand">社区<span>.</span></div>
+        <div class="auth-area" id="authArea"></div>
+    </div>
 </header>
 
 <main class="layout">
     <section class="main-col">
+        <section class="hero">
+            <h1>内容社区</h1>
+            <p>Spring Boot 3 + MyBatis + MySQL + Redis 的用户中心与内容社区。
+               匿名可浏览，登录后可发布与点赞，热榜与限流都是真实实现。</p>
+            <ul class="chips">
+                <li>JWT 鉴权 + jti 黑名单</li>
+                <li>游标分页</li>
+                <li>Redis 计数器与 ZSet 热榜</li>
+                <li>固定窗口限流</li>
+                <li>Idempotency-Key 幂等</li>
+            </ul>
+        </section>
+
         <form class="card composer" id="composer">
             <textarea id="composerBody" maxlength="2000" rows="3"
                       placeholder="说点什么…（Ctrl / ⌘ + Enter 发布）"></textarea>
@@ -25,33 +40,55 @@
             </div>
         </form>
 
-        <div class="feed-head">
+        <div class="section-head">
             <h2>最新</h2>
-            <button type="button" class="ghost" id="refreshBtn">刷新</button>
+            <button type="button" class="ghost small" id="refreshBtn">刷新</button>
         </div>
 
         <ul class="feed" id="feed"></ul>
 
-        <div class="feed-foot">
+        <div class="empty-state" id="feedEmpty" hidden>
+            <div class="empty-ring" aria-hidden="true"></div>
+            <p class="empty-title">还没有内容</p>
+            <p class="empty-sub">第一条由你来发，发布后热榜会立刻出现它。</p>
+            <button type="button" id="emptyAction">登录后发布</button>
+        </div>
+
+        <div class="feed-more">
             <button type="button" class="ghost" id="loadMoreBtn" hidden>加载更多</button>
-            <p class="empty" id="feedEmpty" hidden>还没有内容，登录后发第一条。</p>
         </div>
     </section>
 
     <aside class="side-col">
-        <section class="card">
-            <h3>热榜 Top 10</h3>
+        <section class="card panel">
+            <header class="panel-head">
+                <h3>热榜 Top 10</h3>
+                <span class="tiny muted">按点赞数</span>
+            </header>
             <ol class="hot" id="hot"></ol>
         </section>
 
-        <section class="card about">
-            <h3>关于</h3>
-            <p>Spring Boot 3 · MyBatis · MySQL · Redis</p>
-            <p class="muted tiny">JWT 鉴权 · 游标分页 · ZSet 热榜 · 固定窗口限流 · 幂等发布</p>
-            <p class="muted tiny">匿名可以浏览，点赞与发布需要登录。</p>
+        <section class="card panel">
+            <header class="panel-head">
+                <h3>技术栈</h3>
+            </header>
+            <dl class="spec">
+                <div><dt>运行时</dt><dd>Java 21 / Spring Boot 3.5</dd></div>
+                <div><dt>存储</dt><dd>MySQL 8 + Redis 7</dd></div>
+                <div><dt>鉴权</dt><dd>JWT（Bearer）+ BCrypt</dd></div>
+                <div><dt>契约</dt><dd>统一 Result + 5 位错误码</dd></div>
+                <div><dt>测试</dt><dd>14 类 / 50 用例</dd></div>
+            </dl>
+            <p class="muted tiny note">匿名可以浏览，点赞与发布需要登录。</p>
         </section>
     </aside>
 </main>
+
+<footer class="footer">
+    <span>用户中心 + 内容社区</span>
+    <span class="dot">·</span>
+    <span>设计与取舍见仓库 <code>docs/ARCHITECTURE.md</code></span>
+</footer>
 
 <section class="reqpanel" id="reqPanel">
     <header>
