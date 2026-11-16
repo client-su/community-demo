@@ -34,7 +34,6 @@ mybatis:
     # 数据库 user_id -> Java userId，省掉 resultMap 里的逐列映射
     map-underscore-to-camel-case: true
   type-aliases-package: com.community
-  mapper-locations: classpath:mapper/*.xml
 
 app:
   security:
