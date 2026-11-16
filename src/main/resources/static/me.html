@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>社区 · 我的资料</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<main class="layout narrow">
+    <section class="card">
+        <div class="me-head">
+            <span class="avatar lg" id="avatar"></span>
+            <div>
+                <h1 class="page-title" id="name"></h1>
+                <p class="muted tiny" id="username"></p>
+            </div>
+        </div>
+
+        <dl class="kv">
+            <div><dt>注册时间</dt><dd id="createdAt">—</dd></div>
+            <div><dt>用户 ID</dt><dd id="userId">—</dd></div>
+        </dl>
+
+        <form class="nick-form" id="nickForm" novalidate>
+            <label>昵称
+                <input id="nickname" name="nickname" maxlength="32" placeholder="≤32 位">
+            </label>
+            <button type="submit" class="btn primary" id="save">保存</button>
+        </form>
+
+        <button type="button" class="btn ghost" id="signout">退出登录</button>
+    </section>
+</main>
+
+<noscript>这个页面用原生 JS 渲染，需要开启 JavaScript。</noscript>
+
+<script type="module" src="/js/page-me.js"></script>
+</body>
+</html>

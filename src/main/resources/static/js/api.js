@@ -34,9 +34,40 @@ export function setToken(value) {
     }
 }
 
-/* ---------- 请求日志：给页面右下角的"请求日志"面板用 ---------- */
+/* ---------- 请求日志：给右下角悬浮窗用 ---------- */
 
 const listeners = new Set();
+
+/** 悬浮窗要跨页面看，所以除了内存广播，还把每条记录写进 sessionStorage */
+const REQLOG_KEY = 'community.reqlog';
+// 存储上限 50 条；面板只渲染最近 10 条（由 reqpanel 控制），窗口不会随请求数长高
+const REQLOG_MAX = 50;
+
+export function readRequestLog() {
+    try {
+        const raw = sessionStorage.getItem(REQLOG_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+export function clearRequestLog() {
+    sessionStorage.removeItem(REQLOG_KEY);
+}
+
+function persist(entry) {
+    try {
+        const list = readRequestLog();
+        list.push({ ...entry, ts: Date.now() });
+        // 只留最近 50 条：日志是给人看的，不是埋点
+        while (list.length > REQLOG_MAX) list.shift();
+        sessionStorage.setItem(REQLOG_KEY, JSON.stringify(list));
+    } catch (error) {
+        // sessionStorage 被禁用/写满时不值得拖垮主流程
+    }
+}
 
 export function onRequest(listener) {
     listeners.add(listener);
@@ -44,6 +75,7 @@ export function onRequest(listener) {
 }
 
 function emit(entry) {
+    persist(entry);
     listeners.forEach((fn) => fn(entry));
 }
 
@@ -128,6 +160,7 @@ export const api = {
     login: (payload) => request('POST', '/api/auth/login', { body: payload }),
     logout: () => request('POST', '/api/auth/logout', { auth: true }),
     me: () => request('GET', '/api/me', { auth: true }),
+    updateProfile: (payload) => request('PATCH', '/api/me', { body: payload, auth: true }),
 
     feed: (cursor, size = 10) => request('GET', `/api/contents${query({ cursor, size })}`),
     detail: (id) => request('GET', `/api/contents/${id}`),

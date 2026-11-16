@@ -3,135 +3,36 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>社区 · 用户中心 + 内容社区</title>
+    <title>社区 · 最新</title>
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
 
-<header class="topbar">
-    <div class="topbar-inner">
-        <div class="brand">社区<span>.</span></div>
-        <div class="auth-area" id="authArea"></div>
-    </div>
-</header>
-
 <main class="layout">
     <section class="main-col">
-        <section class="hero">
-            <h1>内容社区</h1>
-            <p>Spring Boot 3 + MyBatis + MySQL + Redis 的用户中心与内容社区。
-               匿名可浏览，登录后可发布与点赞，热榜与限流都是真实实现。</p>
-            <ul class="chips">
-                <li>JWT 鉴权 + jti 黑名单</li>
-                <li>游标分页</li>
-                <li>Redis 计数器与 ZSet 热榜</li>
-                <li>固定窗口限流</li>
-                <li>Idempotency-Key 幂等</li>
-            </ul>
-        </section>
+        <nav class="tabs" id="tabs">
+            <a href="/" data-tab="list">最新</a>
+            <a href="/?tab=hot" data-tab="hot">热榜</a>
+        </nav>
 
-        <form class="card composer" id="composer">
-            <textarea id="composerBody" maxlength="2000" rows="3"
-                      placeholder="说点什么…（Ctrl / ⌘ + Enter 发布）"></textarea>
-            <div class="composer-foot">
-                <span class="hint" id="composerHint"></span>
-                <span class="counter"><span id="bodyCount">0</span>/2000</span>
-                <button type="submit" id="publishBtn" disabled>发布</button>
-            </div>
-        </form>
+        <ul class="rows" id="rows"></ul>
 
-        <div class="section-head">
-            <h2>最新</h2>
-            <button type="button" class="ghost small" id="refreshBtn">刷新</button>
+        <div class="state" id="empty" hidden>
+            <p class="state-title" id="emptyTitle">还没有内容</p>
+            <p class="state-sub" id="emptySub">第一条由你来发，发布后会立刻出现在热榜里。</p>
+            <a class="btn primary" href="/submit.html" id="emptyAction">去发布</a>
         </div>
 
-        <ul class="feed" id="feed"></ul>
-
-        <div class="empty-state" id="feedEmpty" hidden>
-            <div class="empty-ring" aria-hidden="true"></div>
-            <p class="empty-title">还没有内容</p>
-            <p class="empty-sub">第一条由你来发，发布后热榜会立刻出现它。</p>
-            <button type="button" id="emptyAction">登录后发布</button>
-        </div>
-
-        <div class="feed-more">
-            <button type="button" class="ghost" id="loadMoreBtn" hidden>加载更多</button>
+        <div class="more">
+            <button type="button" class="btn ghost" id="moreBtn" hidden>加载更多</button>
         </div>
     </section>
 
-    <aside class="side-col">
-        <section class="card panel">
-            <header class="panel-head">
-                <h3>热榜 Top 10</h3>
-                <span class="tiny muted">按点赞数</span>
-            </header>
-            <ol class="hot" id="hot"></ol>
-        </section>
-
-        <section class="card panel">
-            <header class="panel-head">
-                <h3>技术栈</h3>
-            </header>
-            <dl class="spec">
-                <div><dt>运行时</dt><dd>Java 21 / Spring Boot 3.5</dd></div>
-                <div><dt>存储</dt><dd>MySQL 8 + Redis 7</dd></div>
-                <div><dt>鉴权</dt><dd>JWT（Bearer）+ BCrypt</dd></div>
-                <div><dt>契约</dt><dd>统一 Result + 5 位错误码</dd></div>
-                <div><dt>测试</dt><dd>14 类 / 50 用例</dd></div>
-            </dl>
-            <p class="muted tiny note">匿名可以浏览，点赞与发布需要登录。</p>
-        </section>
-    </aside>
+    <aside class="side-col" id="side"></aside>
 </main>
 
-<footer class="footer">
-    <span>用户中心 + 内容社区</span>
-    <span class="dot">·</span>
-    <span>设计与取舍见仓库 <code>ARCHITECTURE.md</code></span>
-</footer>
+<noscript>这个页面用原生 JS 渲染，需要开启 JavaScript。</noscript>
 
-<section class="reqpanel" id="reqPanel">
-    <header>
-        <strong>请求日志</strong>
-        <span class="muted tiny">每次调用都打一行：看看 429 与幂等重放</span>
-        <button type="button" class="ghost tiny" id="reqToggle">收起</button>
-    </header>
-    <ol id="reqLog"></ol>
-</section>
-
-<dialog id="authDialog" class="dialog">
-    <form class="dialog-head">
-        <h3 id="authTitle">登录</h3>
-        <button type="submit" class="ghost icon" aria-label="关闭">✕</button>
-    </form>
-    <form id="authForm" novalidate>
-        <label>用户名
-            <input name="username" autocomplete="username" placeholder="4-32 位字母数字下划线">
-        </label>
-        <label>密码
-            <input name="password" type="password" autocomplete="current-password" placeholder="8-64 位">
-        </label>
-        <label id="nicknameRow" hidden>昵称
-            <input name="nickname" autocomplete="nickname" placeholder="可选">
-        </label>
-        <p class="form-msg" id="authMsg"></p>
-        <div class="dialog-foot">
-            <button type="button" class="ghost" id="switchMode">去注册</button>
-            <button type="submit" id="authSubmit">登录</button>
-        </div>
-    </form>
-</dialog>
-
-<dialog id="detailDialog" class="dialog">
-    <form class="dialog-head">
-        <h3>内容详情</h3>
-        <button type="submit" class="ghost icon" aria-label="关闭">✕</button>
-    </form>
-    <div id="detailBody"></div>
-</dialog>
-
-<div class="toast" id="toast" hidden></div>
-
-<script type="module" src="/js/app.js"></script>
+<script type="module" src="/js/page-list.js"></script>
 </body>
 </html>

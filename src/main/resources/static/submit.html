@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>社区 · 发布</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<main class="layout narrow">
+    <section class="main-col">
+        <h1 class="page-title">写点什么</h1>
+
+        <form class="composer" id="form" novalidate>
+            <textarea id="body" maxlength="2000" rows="8"
+                      placeholder="说点什么…（Ctrl / ⌘ + Enter 发布）"></textarea>
+            <div class="composer-foot">
+                <span class="hint" id="hint">同一份草稿重复提交只会创建一条（幂等键）</span>
+                <span class="counter"><span id="count">0</span>/2000</span>
+                <button type="submit" class="btn primary" id="submit" disabled>发布</button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<noscript>这个页面用原生 JS 渲染，需要开启 JavaScript。</noscript>
+
+<script type="module" src="/js/page-submit.js"></script>
+</body>
+</html>

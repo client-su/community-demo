@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>社区 · 登录</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="page-auth">
+
+<main class="layout narrow">
+    <section class="card auth-card">
+        <h1 class="page-title" id="title">登录</h1>
+        <p class="sub" id="sub">登录后才能发布与点赞。</p>
+
+        <form id="form" novalidate>
+            <label>用户名
+                <input name="username" autocomplete="username" placeholder="4-32 位字母、数字、下划线">
+            </label>
+            <label>密码
+                <input name="password" type="password" autocomplete="current-password" placeholder="8-64 位">
+            </label>
+            <label id="nicknameRow" hidden>昵称
+                <input name="nickname" autocomplete="nickname" placeholder="可选，≤32 位">
+            </label>
+            <p class="form-msg" id="msg"></p>
+            <button type="submit" class="btn primary block" id="submit">登录</button>
+        </form>
+
+        <p class="switch">
+            <button type="button" class="link" id="switch">没有账号，去注册</button>
+        </p>
+
+        <p class="auth-foot">登录状态保存在浏览器本地（JWT，2 小时过期）。</p>
+    </section>
+
+    <p class="auth-note">用户中心 + 内容社区 · 匿名可浏览，点赞与发布需要登录</p>
+</main>
+
+<noscript>这个页面用原生 JS 渲染，需要开启 JavaScript。</noscript>
+
+<script type="module" src="/js/page-login.js"></script>
+</body>
+</html>
