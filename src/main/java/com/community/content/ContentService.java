@@ -72,6 +72,51 @@ public class ContentService {
     }
 
     /**
+     * 读 Redis 缓存：失败当作「未命中」返回 null，由调用方回源 DB。
+     *
+     * <p>Redis 的故障形态统一是 RuntimeException（连接失败 / 超时 / 序列化），
+     * 逐条枚举没有意义，一把 catch 住即可——DB 才是真相，缓存读不到最多慢一点。
+     */
+    private String safeGet(String key) {
+        try {
+            return redis.opsForValue().get(key);
+        } catch (RuntimeException ex) {
+            log.warn("Redis 读取失败，回源 DB, key={}", key, ex);
+            return null;
+        }
+    }
+
+    /**
+     * 写 Redis 缓存：失败只记日志，不影响主流程。
+     *
+     * <p>缓存写不进的最坏结果是下次仍 miss 再回源一次 DB，不构成正确性问题。
+     */
+    private void safeSet(String key, String value, Duration ttl) {
+        try {
+            redis.opsForValue().set(key, value, ttl);
+        } catch (RuntimeException ex) {
+            log.warn("Redis 写入失败，跳过缓存, key={}", key, ex);
+        }
+    }
+
+    /**
+     * 抢占幂等占位。
+     *
+     * <p>Redis 不可用时返回 true（当作抢到了）继续 insert：防重复由 DB 唯一键
+     * uk_user_idem 兜底。不能返回 false——那会去 replay 查一条尚未插入的记录，
+     * 把「首次请求」误判成「正在处理中」。
+     */
+    private boolean tryAcquireIdemLock(String redisKey) {
+        try {
+            return Boolean.TRUE.equals(
+                    redis.opsForValue().setIfAbsent(redisKey, "processing", IDEM_LOCK_TTL));
+        } catch (RuntimeException ex) {
+            log.warn("幂等占位 Redis 不可用，跳过占位由 DB 唯一键兜底, key={}", redisKey, ex);
+            return true;
+        }
+    }
+
+    /**
      * 发布内容。
      *
      * <p>幂等三层：
@@ -87,8 +132,7 @@ public class ContentService {
         String idemKey = normalizeIdemKey(rawIdemKey);
 
         String redisKey = IDEM_KEY_PREFIX + userId + ":" + idemKey;
-        boolean acquired = Boolean.TRUE.equals(
-                redis.opsForValue().setIfAbsent(redisKey, "processing", IDEM_LOCK_TTL));
+        boolean acquired = tryAcquireIdemLock(redisKey);
         if (!acquired) {
             // 抢不到：可能正在处理，也可能已完成 —— 都要回查数据库才能回答
             return new PublishResult(replay(userId, idemKey), false);
@@ -109,7 +153,7 @@ public class ContentService {
             Content saved = contentMapper.findVisibleById(content.getId()).orElseThrow();
 
             // 标记完成：值为内容 id，TTL 拉长，重试可直接回查命中
-            redis.opsForValue().set(redisKey, String.valueOf(saved.getId()), IDEM_DONE_TTL);
+            safeSet(redisKey, String.valueOf(saved.getId()), IDEM_DONE_TTL);
 
             return new PublishResult(toVO(saved), true);
         } catch (DuplicateKeyException ex) {
@@ -179,21 +223,21 @@ public class ContentService {
      */
     public ContentVO detail(long id) {
         String key = cacheKey(id);
-        String cached = redis.opsForValue().get(key);
+        String cached = safeGet(key);
 
         if (NULL_MARKER.equals(cached)) {
             log.info("detail 命中空值标记，直接返回 404, id={}", id);
             throw new BizException(ErrorCode.CONTENT_NOT_FOUND);
         }
         if (cached != null) {
-            log.info("detail 缓存命中, id={}, ttl={}s", id, redis.getExpire(key));
+            log.info("detail 缓存命中, id={}", id);
             return fromJson(cached);
         }
 
         Content content = contentMapper.findVisibleById(id).orElse(null);
         if (content == null) {
             // 防穿透：不存在也占位（短 TTL），避免同一个不存在的 id 反复查库
-            redis.opsForValue().set(key, NULL_MARKER, NULL_TTL);
+            safeSet(key, NULL_MARKER, NULL_TTL);
             log.info("detail 未命中且库中无数据，写入空值标记, id={}", id);
             throw new BizException(ErrorCode.CONTENT_NOT_FOUND);
         }
@@ -201,7 +245,7 @@ public class ContentService {
         ContentVO vo = toVO(content);
         String json = toJson(vo);
         if (json != null) {
-            redis.opsForValue().set(key, json, DETAIL_TTL);
+            safeSet(key, json, DETAIL_TTL);
         }
         log.info("detail 缓存未命中，已从数据库加载并回写, id={}", id);
         return vo;
@@ -225,7 +269,12 @@ public class ContentService {
             throw new BizException(ErrorCode.CONTENT_NOT_FOUND);
         }
 
-        redis.delete(cacheKey(id));
+        // Redis 失败不影响删除结果：DB 已软删，缓存最坏是等 TTL 过期或下次 miss 回源
+        try {
+            redis.delete(cacheKey(id));
+        } catch (RuntimeException ex) {
+            log.warn("删除后清理详情缓存失败（不影响删除结果）, id={}", id, ex);
+        }
         log.info("内容已软删并清理缓存, id={}, userId={}", id, userId);
     }
 
@@ -238,12 +287,21 @@ public class ContentService {
     public List<ContentVO> hot(int limit) {
         int topN = Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
 
-        // 榜单缓存丢了就重建：这是“Redis 只是缓存”的最终证明
-        if (!hotRankService.hasData()) {
-            rebuildHotRank();
+        List<Long> ids;
+        try {
+            // 榜单缓存丢了就重建：这是“Redis 只是缓存”的最终证明
+            if (!hotRankService.hasData()) {
+                rebuildHotRank();
+            }
+            ids = hotRankService.topIds(topN);
+        } catch (RuntimeException ex) {
+            // Redis 不可用时直接回源 DB：topByLikeCount 的排序语义与热榜一致
+            log.warn("热榜 Redis 不可用，直接回源 DB 查询, limit={}", topN, ex);
+            return contentMapper.topByLikeCount(topN).stream()
+                    .map(this::toVO)
+                    .toList();
         }
 
-        List<Long> ids = hotRankService.topIds(topN);
         if (ids.isEmpty()) {
             return List.of();
         }
