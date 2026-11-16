@@ -20,6 +20,14 @@ spring:
       # 超时短一点：鉴权路径上不该被 Redis 拖住
       timeout: 2s
       connect-timeout: 2s
+  web:
+    resources:
+      # 浏览器启发式缓存会让改过的 js/css 不生效，调试时得硬刷。
+      # 这里是展示项目，静态资源体积很小，直接要求每次回源校验，省掉这类假 bug。
+      cache:
+        cachecontrol:
+          no-cache: true
+          must-revalidate: true
 
 mybatis:
   configuration:
