@@ -6,10 +6,13 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -31,16 +34,34 @@ import java.util.UUID;
 @Service
 public class JwtService {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
+
     private final SecretKey key;
     private final String issuer;
     private final Duration ttl;
 
-    public JwtService(@Value("${app.jwt.secret}") String base64Secret,
+    public JwtService(@Value("${app.jwt.secret:}") String base64Secret,
                       @Value("${app.jwt.issuer}") String issuer,
                       @Value("${app.jwt.ttl}") Duration ttl) {
-        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64Secret));
+        this.key = keyOf(base64Secret);
         this.issuer = issuer;
         this.ttl = ttl;
+    }
+
+    /**
+     * 密钥来源：环境变量 JWT_SECRET 优先，没配就现场生成一次性随机密钥。
+     *
+     * <p>不往仓库里放任何可用的默认密钥：一旦默认值公开，任何人都能自己签出合法 token。
+     * 随机密钥重启即失效，本地开发够用；公网部署必须显式配置 JWT_SECRET。
+     */
+    private static SecretKey keyOf(String base64Secret) {
+        if (base64Secret == null || base64Secret.isBlank()) {
+            byte[] random = new byte[32];
+            new SecureRandom().nextBytes(random);
+            log.warn("未配置 JWT_SECRET，本次启动使用临时随机密钥：重启后已签发的 token 全部失效");
+            return Keys.hmacShaKeyFor(random);
+        }
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64Secret));
     }
 
     /** 签发结果：令牌 + 它的 jti 与到期时间（登出时要写黑名单） */

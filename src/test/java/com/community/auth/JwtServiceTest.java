@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.Duration;
@@ -21,6 +22,10 @@ class JwtServiceTest {
 
     @Autowired
     private JwtService jwtService;
+
+    /** 手工 new 的实例必须和上下文共用同一把钥匙，否则验签先失败、测不到过期与 issuer */
+    @Value("${app.jwt.secret}")
+    private String secret;
 
     @Test
     void issueThenParse() {
@@ -61,7 +66,6 @@ class JwtServiceTest {
     @Test
     void expiredTokenIsRejected() {
         // 用同一个密钥构造一个 -1 秒过期的 service
-        String secret = "HqqXRUygiLhMHLgFj2WxSIq18ZXQBkXHqKKf9MAmnn8=";
         JwtService shortLived = new JwtService(secret, "community", Duration.ofSeconds(-1));
         String token = shortLived.issue(42L).token();
 
@@ -72,7 +76,6 @@ class JwtServiceTest {
 
     @Test
     void wrongIssuerIsRejected() {
-        String secret = "HqqXRUygiLhMHLgFj2WxSIq18ZXQBkXHqKKf9MAmnn8=";
         JwtService otherIssuer = new JwtService(secret, "another-service", Duration.ofHours(1));
         String token = otherIssuer.issue(42L).token();
 

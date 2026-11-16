@@ -47,6 +47,16 @@ DB_PASSWORD=root mvn spring-boot:run    # 启动应用
 > 所以第二条要带 `DB_PASSWORD=root`。
 > 本机已有 MySQL / Redis 占着默认端口时，看 [docker-compose.yml](docker-compose.yml) 顶部的端口覆盖写法。
 
+JWT 密钥不配也能跑：没设 `JWT_SECRET` 时，启动会生成一把一次性随机密钥（日志打 WARN），
+代价是重启后已经发出去的 token 全部失效。对外部署必须显式给一把，至少 32 字节：
+
+```bash
+export JWT_SECRET="$(openssl rand -base64 32)"
+```
+
+早期版本的 `application.yml` 里写死过一个默认密钥，它仍留在 git 历史中，本项目没有改写历史；
+当前代码不含任何可用的密钥。
+
 想看有内容的界面（4 个用户 / 8 条内容 / 9 条点赞）：
 
 ```bash
