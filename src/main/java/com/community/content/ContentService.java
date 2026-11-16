@@ -117,6 +117,20 @@ public class ContentService {
     }
 
     /**
+     * 失效详情缓存：点赞/取消点赞改变 likeCount 后调用，让详情读到新鲜计数。
+     *
+     * <p>Redis 失败只记日志：缓存删不掉的最坏后果是详情短暂读到旧计数，
+     * 等 TTL 过期或下次 miss 回源即可，不影响主流程。
+     */
+    public void invalidateDetailCache(long id) {
+        try {
+            redis.delete(cacheKey(id));
+        } catch (RuntimeException ex) {
+            log.warn("失效详情缓存失败（不影响主流程）, id={}", id, ex);
+        }
+    }
+
+    /**
      * 发布内容。
      *
      * <p>幂等三层：
@@ -269,12 +283,8 @@ public class ContentService {
             throw new BizException(ErrorCode.CONTENT_NOT_FOUND);
         }
 
-        // Redis 失败不影响删除结果：DB 已软删，缓存最坏是等 TTL 过期或下次 miss 回源
-        try {
-            redis.delete(cacheKey(id));
-        } catch (RuntimeException ex) {
-            log.warn("删除后清理详情缓存失败（不影响删除结果）, id={}", id, ex);
-        }
+        // 先改库、后删缓存；Redis 失败不影响删除结果
+        invalidateDetailCache(id);
         log.info("内容已软删并清理缓存, id={}, userId={}", id, userId);
     }
 

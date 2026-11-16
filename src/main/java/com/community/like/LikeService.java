@@ -5,6 +5,7 @@ import com.community.common.ErrorCode;
 import com.community.common.UserContext;
 import com.community.content.Content;
 import com.community.content.ContentMapper;
+import com.community.content.ContentService;
 import com.community.like.dto.LikeResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +27,16 @@ public class LikeService {
     private final ContentMapper contentMapper;
     private final LikeRedisService likeRedis;
     private final HotRankService hotRank;
+    private final ContentService contentService;
 
     public LikeService(LikeMapper likeMapper, ContentMapper contentMapper,
-                       LikeRedisService likeRedis, HotRankService hotRank) {
+                       LikeRedisService likeRedis, HotRankService hotRank,
+                       ContentService contentService) {
         this.likeMapper = likeMapper;
         this.contentMapper = contentMapper;
         this.likeRedis = likeRedis;
         this.hotRank = hotRank;
+        this.contentService = contentService;
     }
 
     @Transactional
@@ -55,6 +59,8 @@ public class LikeService {
 
         if (inserted == 1) {
             updateHotRank(contentId, 1);
+            // likeCount 真的 +1 了，失效详情缓存让详情读到新鲜计数
+            contentService.invalidateDetailCache(contentId);
         }
 
         return currentState(contentId, true);
@@ -79,6 +85,8 @@ public class LikeService {
 
         if (deleted == 1) {
             updateHotRank(contentId, -1);
+            // likeCount 真的 -1 了，失效详情缓存让详情读到新鲜计数
+            contentService.invalidateDetailCache(contentId);
         }
 
         return currentState(contentId, false);

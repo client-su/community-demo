@@ -166,4 +166,28 @@ class ContentFlowTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(40401));
     }
+
+    @Test
+    void likeInvalidatesDetailCache() throws Exception {
+        long id = publish("点赞失效详情缓存测试", "flow-" + UUID.randomUUID(), 201);
+
+        // 第一次详情：把 likeCount=0 写进缓存
+        mockMvc.perform(get("/api/contents/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.likeCount").value(0));
+
+        // 点赞：likeCount 变 1，同时失效详情缓存
+        mockMvc.perform(post("/api/contents/" + id + "/like")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.likeCount").value(1));
+
+        // 第二次详情：缓存若没失效会读到 0，失效则应读到 1
+        mockMvc.perform(get("/api/contents/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.likeCount").value(1));
+
+        // @Transactional 不回滚 Redis，手动清理详情缓存
+        redis.delete("content:detail:" + id);
+    }
 }
