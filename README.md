@@ -4,53 +4,15 @@
 > 点赞与 Redis 热榜 → 限流与幂等。
 > 附一个同源前端页，clone 下来两条命令就能看到界面，以及每个请求的状态码。
 
-**17 个 REST 接口 · 14 个测试类 / 55 个用例 · 测试跑在真实 MySQL 8 + Redis 7 上，不 mock。**
-
 ## 界面
 
 - 首页：匿名可读信息流与热榜；点赞、发布需要登录
 - 右下角 **请求日志**：每次调用显示「方法 路径 状态码 traceId 耗时」，可以现场撞出 `429`，
   也能看到幂等重放返回的 `200`
 
-## 三个关键取舍
+![登录页：演示账号一键填充](screenshots/limit.png)
 
-- **点赞幂等**：不靠「先查再插」，而是唯一键 + `INSERT IGNORE`，只有 `inserted == 1` 才加计数。
-  代价：不能拿 Redis `SADD` 的返回值当判据，Redis 只能是加速层。
-- **游标分页**：`WHERE id < cursor ORDER BY id DESC`，游标取上一页最后一条 id。
-  代价：不能跳页；游标必须严格 `<`，写成 `<=` 会重复。
-- **Redis 故障降级**：写路径以 MySQL 为准，Redis 失败只 `log.warn`，点赞仍然成功。
-  代价：降级期间热榜与计数缓存短暂不准。
-
-完整 10 条（每条都写了代价）见 [ARCHITECTURE.md](ARCHITECTURE.md)。
-
-## 怎么自己验证
-
-```bash
-mvn test    # 55 个用例。跑前 content / content_like 必须为空，见「快速开始」末尾的说明
-```
-
-```bash
-# 1) 登录拿 token（演示账号见「快速开始」）
-curl -s -X POST localhost:8080/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"demo_alice","password":"Passw0rd!2026"}'
-# {"code":0,"message":"成功","data":{"token":"eyJhbGciOiJIUzI1NiJ9..."}}
-
-# 2) 同一分钟连错 6 次：前 5 次 401，第 6 次 429
-#    限流按 IP 计，成功登录的那次也算一次
-for i in $(seq 6); do
-  curl -s -o /dev/null -w "%{http_code} " -X POST localhost:8080/api/auth/login \
-    -H 'Content-Type: application/json' -d '{"username":"demo_alice","password":"wrong"}'
-done; echo
-# 401 401 401 401 401 429
-```
-
-## 已知边界
-
-- 只有内容与点赞，**没有评论、搜索、分类 / 标签**
-- 分页是游标式，**不支持跳到第 N 页**
-- 单机部署（内嵌 Tomcat + 单实例 Redis），**没有 CI、没有压测报告**
-- 前端是原生 JS 静态页，只用来展示接口行为，**没有前端测试**
+![演示页：连错 6 次触发 429 与幂等重放](screenshots/lab.png)
 
 ## 快速开始
 
@@ -88,33 +50,6 @@ redis-cli DEL hot:content               # 让热榜从 DB 重建
 不灌演示数据也能跑完所有功能，首页会显示空态。注意：**演示数据不要带进 `mvn test`**，
 分页用例假设 `content` 表为空（所以 seed 刻意没有挂进 `docker-entrypoint-initdb.d`）。
 
-## 接口
-
-17 个接口，完整契约（请求体、响应体、错误码）见 [API.md](API.md)。
-
-| 方法 | 路径 | 鉴权 | 说明 |
-| --- | --- | --- | --- |
-| POST | `/api/auth/register` | 匿名 | 注册，创建成功返回 201 |
-| POST | `/api/auth/login` | 匿名 | 登录，按 IP 限流 5 次 / 分钟 |
-| POST | `/api/auth/logout` | 需要 | 登出，jti 进黑名单 |
-| GET | `/api/me` | 需要 | 当前用户资料 |
-| PATCH | `/api/me` | 需要 | 部分更新（只改传了的字段） |
-| GET | `/api/contents` | 匿名 | 游标分页信息流 |
-| POST | `/api/contents` | 需要 | 发布，支持 `Idempotency-Key` |
-| GET | `/api/contents/{id}` | 匿名 | 详情（带缓存） |
-| DELETE | `/api/contents/{id}` | 需要 | 软删，只能删自己的 |
-| POST | `/api/contents/{id}/like` | 需要 | 点赞，幂等 |
-| DELETE | `/api/contents/{id}/like` | 需要 | 取消点赞 |
-| GET | `/api/contents/{id}/like` | 需要 | 当前用户的点赞态 |
-| GET | `/api/contents/hot` | 匿名 | 热榜 Top N |
-| GET | `/api/users/{id}` | 匿名 | 公开资料 |
-| GET | `/api/users/{id}/contents` | 匿名 | 某人发布的内容 |
-| GET | `/api/me/contents` | 需要 | 我发布的 |
-| GET | `/api/me/likes` | 需要 | 我赞过的 |
-
-统一响应体：`{"code": 0, "message": "成功", "data": ...}`。
-`code` 非 0 时是 5 位业务错误码，前三位即对应的 HTTP 状态码（如 `40901` → 409）。
-
 ## 目录结构
 
 ```
@@ -140,23 +75,6 @@ community/
 ```
 
 按**能力**分包，不按 `controller/service/mapper` 分层：后者会让一个功能的改动散落在四个目录里。
-
-## 测试
-
-```bash
-mvn test
-```
-
-14 个类 / 55 个用例，跑在真实的 MySQL + Redis 上（没有把存储 mock 掉）。
-
-| 关注点 | 用例在验什么 |
-| --- | --- |
-| 密码与 JWT | BCrypt 同密码不同哈希；六种无效 token 全部拒绝 |
-| 鉴权边界 | 无 token / 篡改 / 过期 / 黑名单；匿名可读，写接口仍 401 |
-| 分页与缓存 | 游标三页无重复；缓存 miss → hit；空值标记挡住穿透 |
-| 点赞与热榜 | 重复点赞计数不变；ZSet 与 SQL 排序一致；缓存清空后自动重建 |
-| 并发与降级 | 50 线程并发点赞只落 1 行；Redis 全挂时点赞仍成功 |
-| 端到端 | 注册 → 登录 → 发布（幂等）→ 列表 → 详情 → 删除 → 404 |
 
 ## 技术栈
 
