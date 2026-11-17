@@ -7,11 +7,15 @@ import java.time.LocalDateTime;
  *
  * <p>`deleted` 是软删标记：内容被删后仍要保留，因为点赞记录、审计、统计都可能引用它。
  * 代价是每条查询都必须带 deleted = 0，漏一处就是 bug。
+ *
+ * <p>`nickname` 不属于 content 表：由查询 JOIN `user` 表填充，用于直接组装对外 VO，
+ * 避免 Service 层为每条内容再发一次查用户。
  */
 public class Content {
 
     private Long id;
     private Long userId;
+    private String nickname;
     private String idemKey;
     private String body;
     private Integer deleted;
@@ -36,6 +40,14 @@ public class Content {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public String getIdemKey() {

@@ -64,7 +64,8 @@ public class ContentService {
     }
 
     private ContentVO toVO(Content c) {
-        return new ContentVO(c.getId(), c.getUserId(), c.getBody(), c.getLikeCount(), c.getCreatedAt());
+        return new ContentVO(c.getId(), c.getUserId(), c.getNickname(),
+                c.getBody(), c.getLikeCount(), c.getCreatedAt());
     }
 
     private String cacheKey(long id) {
@@ -227,6 +228,34 @@ public class ContentService {
         Long nextCursor = hasMore ? rows.get(rows.size() - 1).getId() : null;
 
         return new PageResponse<>(items, nextCursor, hasMore);
+    }
+
+    /**
+     * 某人发布的内容（匿名可看）。与 feed 共用同一套分页规则，只多一个 userId 过滤。
+     */
+    public PageResponse<ContentVO> userContents(long userId, Long cursor, Integer size) {
+        int limit = (size == null || size < 1) ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+        long effectiveCursor = (cursor == null) ? Long.MAX_VALUE : cursor;
+
+        List<Content> rows = contentMapper.pageByUser(userId, effectiveCursor, limit + 1);
+
+        boolean hasMore = rows.size() > limit;
+        if (hasMore) {
+            rows = rows.subList(0, limit);
+        }
+
+        List<ContentVO> items = rows.stream().map(this::toVO).toList();
+        Long nextCursor = hasMore ? rows.get(rows.size() - 1).getId() : null;
+
+        return new PageResponse<>(items, nextCursor, hasMore);
+    }
+
+    /**
+     * 当前登录用户发布的内容。身份来自 {@link UserContext}，不接受外部 userId。
+     */
+    public PageResponse<ContentVO> myContents(Long cursor, Integer size) {
+        long userId = UserContext.require();
+        return userContents(userId, cursor, size);
     }
 
     /**

@@ -22,10 +22,12 @@ public interface ContentMapper {
 
     /** 详情：软删的内容视为不存在 */
     @Select("""
-            SELECT id, user_id, idem_key, body, deleted, like_count, created_at, updated_at
-              FROM `content`
-             WHERE id = #{id}
-               AND deleted = 0
+            SELECT c.id, c.user_id, c.idem_key, c.body, c.deleted, c.like_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.id = #{id}
+               AND c.deleted = 0
             """)
     Optional<Content> findVisibleById(@Param("id") Long id);
 
@@ -37,14 +39,34 @@ public interface ContentMapper {
      * cursor 传 Long.MAX_VALUE 表示第一页——用参数表达分支，避免动态 SQL。
      */
     @Select("""
-            SELECT id, user_id, body, like_count, created_at, updated_at
-              FROM `content`
-             WHERE deleted = 0
-               AND id < #{cursor}
-             ORDER BY id DESC
+            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.deleted = 0
+               AND c.id < #{cursor}
+             ORDER BY c.id DESC
              LIMIT #{size}
             """)
     List<Content> page(@Param("cursor") long cursor, @Param("size") int size);
+
+    /**
+     * 某人发布的内容（游标分页）。与 page 同构，只多一个 userId 等值过滤。
+     * 走 idx_user_id(user_id) + id 反向扫描。
+     */
+    @Select("""
+            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.deleted = 0
+               AND c.user_id = #{userId}
+               AND c.id < #{cursor}
+             ORDER BY c.id DESC
+             LIMIT #{size}
+            """)
+    List<Content> pageByUser(@Param("userId") long userId,
+                             @Param("cursor") long cursor, @Param("size") int size);
 
     /**
      * 软删：存在性 + 归属 + 未删 三重校验一次性完成。
@@ -63,10 +85,12 @@ public interface ContentMapper {
 
     @Select("""
             <script>
-            SELECT id, user_id, body, like_count, created_at, updated_at
-              FROM `content`
-             WHERE deleted = 0
-               AND id IN
+            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.deleted = 0
+               AND c.id IN
                <foreach item="id" collection="ids" open="(" separator="," close=")">
                  #{id}
                </foreach>
@@ -76,10 +100,12 @@ public interface ContentMapper {
 
     /** 幂等重放查询：按 (user_id, idem_key) 定位唯一的那条 */
     @Select("""
-            SELECT id, user_id, idem_key, body, deleted, like_count, created_at, updated_at
-              FROM `content`
-             WHERE user_id = #{userId}
-               AND idem_key = #{idemKey}
+            SELECT c.id, c.user_id, c.idem_key, c.body, c.deleted, c.like_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.user_id = #{userId}
+               AND c.idem_key = #{idemKey}
             """)
     Optional<Content> findByUserIdAndIdemKey(@Param("userId") long userId,
                                              @Param("idemKey") String idemKey);
@@ -103,11 +129,13 @@ public interface ContentMapper {
 
     /** 热榜重建用：按赞数取 Top N（走 idx_deleted_id 过滤 + 文件排序，低频调用可接受） */
     @Select("""
-            SELECT id, user_id, body, like_count, created_at, updated_at
-              FROM `content`
-             WHERE deleted = 0
-               AND like_count > 0
-             ORDER BY like_count DESC, id DESC
+            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.deleted = 0
+               AND c.like_count > 0
+             ORDER BY c.like_count DESC, c.id DESC
              LIMIT #{limit}
             """)
     List<Content> topByLikeCount(@Param("limit") int limit);

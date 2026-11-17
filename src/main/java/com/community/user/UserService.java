@@ -19,6 +19,20 @@ public class UserService {
     }
 
     /**
+     * 公开资料（匿名可看）：用户主页用。
+     *
+     * <p>禁用账号与「不存在」返回同一个 404，防资源枚举。
+     */
+    public ProfileVO publicProfile(long id) {
+        User user = userMapper.findById(id)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "用户不存在"));
+        if (!user.isActive()) {
+            throw new BizException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
+    }
+
+    /**
      * 当前登录用户资料。
      *
      * <p>身份来自 {@link UserContext}（由鉴权拦截器写入），不接受任何外部传入的 userId。

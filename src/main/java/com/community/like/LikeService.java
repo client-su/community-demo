@@ -6,11 +6,15 @@ import com.community.common.UserContext;
 import com.community.content.Content;
 import com.community.content.ContentMapper;
 import com.community.content.ContentService;
+import com.community.content.dto.ContentVO;
+import com.community.content.dto.PageResponse;
 import com.community.like.dto.LikeResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 点赞/取消点赞。
@@ -22,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class LikeService {
 
     private static final Logger log = LoggerFactory.getLogger(LikeService.class);
+
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 50;
 
     private final LikeMapper likeMapper;
     private final ContentMapper contentMapper;
@@ -139,5 +146,31 @@ public class LikeService {
     private void requireVisibleContent(long contentId) {
         contentMapper.findVisibleById(contentId)
                 .orElseThrow(() -> new BizException(ErrorCode.CONTENT_NOT_FOUND));
+    }
+
+    /**
+     * 「我赞过的内容」游标分页，游标是 content_like.id（点赞先后）。
+     *
+     * <p>身份来自 {@link UserContext}，不接受外部传入的 userId。
+     */
+    public PageResponse<ContentVO> likedByMe(Long cursor, Integer size) {
+        long userId = UserContext.require();
+        int limit = (size == null || size < 1) ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+        long effectiveCursor = (cursor == null) ? Long.MAX_VALUE : cursor;
+
+        List<LikedContentRow> rows = likeMapper.pageLikedByUser(userId, effectiveCursor, limit + 1);
+
+        boolean hasMore = rows.size() > limit;
+        if (hasMore) {
+            rows = rows.subList(0, limit);
+        }
+
+        List<ContentVO> items = rows.stream()
+                .map(r -> new ContentVO(r.getId(), r.getUserId(), r.getNickname(),
+                        r.getBody(), r.getLikeCount(), r.getCreatedAt()))
+                .toList();
+
+        Long nextCursor = hasMore ? rows.get(rows.size() - 1).getLikeId() : null;
+        return new PageResponse<>(items, nextCursor, hasMore);
     }
 }

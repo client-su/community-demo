@@ -49,4 +49,24 @@ public interface LikeMapper {
     /** 重建 Redis 集合用：把某内容的全部点赞者捞出来 */
     @Select("SELECT user_id FROM `content_like` WHERE content_id = #{contentId}")
     java.util.List<Long> findUserIdsByContent(@Param("contentId") long contentId);
+
+    /**
+     * 「我赞过的内容」游标分页：按点赞记录 id 倒序（id 自增，越大越新），
+     * 只返回未删内容。cursor 传 Long.MAX_VALUE 表示第一页。
+     */
+    @Select("""
+            SELECT l.id AS like_id,
+                   c.id, c.user_id, c.body, c.like_count, c.created_at,
+                   u.nickname
+              FROM `content_like` l
+              JOIN `content` c ON c.id = l.content_id AND c.deleted = 0
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE l.user_id = #{userId}
+               AND l.id < #{cursor}
+             ORDER BY l.id DESC
+             LIMIT #{size}
+            """)
+    java.util.List<LikedContentRow> pageLikedByUser(@Param("userId") long userId,
+                                                    @Param("cursor") long cursor,
+                                                    @Param("size") int size);
 }
