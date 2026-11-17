@@ -139,7 +139,33 @@ function renderDecisions() {
 async function boot() {
     await mountShell({ active: 'docs' });
     const root = document.querySelector('#docs');
-    root.append(renderEndpoints(), renderErrorCodes(), renderRedisRoles(), renderDecisions());
+
+    // 四个分区各自渲染成 section，默认只显示「接口」；tab 点击切换。
+    const panes = {
+        endpoints: renderEndpoints(),
+        errors: renderErrorCodes(),
+        redis: renderRedisRoles(),
+        decisions: renderDecisions(),
+    };
+    Object.entries(panes).forEach(([key, sec]) => {
+        sec.dataset.pane = key;
+        root.append(sec);
+    });
+
+    const tabs = document.querySelectorAll('#docsTabs a');
+    const show = (key) => {
+        Object.entries(panes).forEach(([k, sec]) => {
+            sec.hidden = k !== key;
+        });
+        tabs.forEach((a) => a.classList.toggle('active', a.dataset.tab === key));
+    };
+    tabs.forEach((a) => {
+        a.addEventListener('click', (event) => {
+            event.preventDefault();
+            show(a.dataset.tab);
+        });
+    });
+    show('endpoints');
 }
 
 boot();

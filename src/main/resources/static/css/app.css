@@ -901,11 +901,11 @@ input:focus {
 /* ---------- 接口总览页 ---------- */
 
 .docs-section {
-    margin-top: 26px;
+    margin-top: 0;
 }
 
-.docs-section:first-child {
-    margin-top: 0;
+#docsTabs {
+    margin-bottom: 12px;
 }
 
 .docs-head {
