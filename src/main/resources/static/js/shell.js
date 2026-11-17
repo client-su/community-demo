@@ -74,6 +74,11 @@ export function displayName(user) {
     return (user && (user.nickname || user.username)) || '未登录';
 }
 
+/** 内容条目的作者显示名：昵称优先，没有就退回「用户 #id」（ContentVO 可能不带昵称） */
+export function authorName(item) {
+    return (item && item.nickname) ? item.nickname : `用户 #${item && item.userId}`;
+}
+
 export function initial(user) {
     const name = displayName(user).trim();
     return name ? name.charAt(0).toUpperCase() : '?';
@@ -158,6 +163,8 @@ const NAV = [
     { key: 'list', href: '/', text: '最新' },
     { key: 'hot', href: '/?tab=hot', text: '热榜' },
     { key: 'submit', href: '/submit.html', text: '写内容' },
+    { key: 'docs', href: '/docs.html', text: '接口' },
+    { key: 'lab', href: '/lab.html', text: '演示' },
 ];
 
 function buildHeader(active) {

@@ -275,6 +275,11 @@ body {
     border-bottom-color: var(--accent);
 }
 
+/* 「我的」页：资料卡和 tab 之间留出间距 */
+#meTabs {
+    margin-top: 20px;
+}
+
 /* ---------- 列表：一条一行，分隔线而不是卡片阴影 ---------- */
 
 .rows {
@@ -326,6 +331,14 @@ body {
     font-size: 12px;
     color: var(--text-3);
     font-variant-numeric: tabular-nums;
+}
+
+.row-author {
+    color: var(--text-2);
+}
+
+.row-author:hover {
+    color: var(--accent);
 }
 
 .more {
@@ -497,6 +510,14 @@ body {
 .topic-meta .who {
     font-size: 14px;
     font-weight: 600;
+}
+
+.topic-meta .who:hover {
+    color: var(--accent);
+}
+
+.avatar:hover {
+    filter: brightness(1.04);
 }
 
 .topic-body {
@@ -875,6 +896,210 @@ input:focus {
     color: #64748b;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ---------- 接口总览页 ---------- */
+
+.docs-section {
+    margin-top: 26px;
+}
+
+.docs-section:first-child {
+    margin-top: 0;
+}
+
+.docs-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.docs-head h2 {
+    font-size: 16px;
+}
+
+.ep-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.ep-row {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 52px minmax(0, 1.35fr);
+    gap: 12px;
+    align-items: center;
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+}
+
+.ep-row:last-child {
+    border-bottom: none;
+}
+
+.method {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding: 2px 0;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .3px;
+}
+
+.method.get {
+    background: var(--ok);
+}
+
+.method.post {
+    background: var(--accent);
+}
+
+.method.patch {
+    background: #e8930c;
+}
+
+.method.delete {
+    background: var(--danger);
+}
+
+.ep-path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+}
+
+.ep-auth {
+    text-align: center;
+    padding: 1px 0;
+    border-radius: 999px;
+    font-size: 11.5px;
+}
+
+.ep-auth.open {
+    color: var(--ok);
+    background: #e9f7ee;
+}
+
+.ep-auth.need {
+    color: #b4690e;
+    background: #fff4e5;
+}
+
+.ep-note {
+    color: var(--text-2);
+}
+
+.ep-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--accent);
+}
+
+.ep-http {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-3);
+}
+
+.ep-role {
+    font-weight: 600;
+}
+
+.decision-list {
+    margin: 4px 0 0;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.decision-list li {
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.decision-list li strong {
+    margin-right: 6px;
+}
+
+.decision-problem {
+    display: block;
+    color: var(--text-2);
+}
+
+.decision-solution {
+    display: block;
+    color: var(--text-2);
+}
+
+/* ---------- 演示页 ---------- */
+
+.lab-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.lab-grid .card {
+    min-width: 0;
+}
+
+.lab-step {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-2);
+}
+
+.lab-grid textarea {
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+    padding: 9px 11px;
+    font: inherit;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    outline: none;
+    resize: vertical;
+    min-height: 72px;
+}
+
+.lab-grid textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.lab-out {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: #f6f8fb;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 42px;
+}
+
+.lab-out.ok {
+    border-color: #cde9d4;
+    background: #f2faf4;
+}
+
+.lab-out.err {
+    border-color: #f3caca;
+    background: #fdf3f3;
+}
+
+@media (max-width: 760px) {
+    .lab-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .reqbox li.reqempty {

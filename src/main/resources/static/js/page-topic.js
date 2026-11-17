@@ -6,7 +6,7 @@
  */
 
 import { ApiError, api } from './api.js';
-import { cachedMe, formatTime, handleApiError, mountShell, toast } from './shell.js';
+import { authorName, cachedMe, formatTime, handleApiError, mountShell, toast } from './shell.js';
 
 const id = Number(new URLSearchParams(location.search).get('id'));
 const root = document.querySelector('#topic');
@@ -75,15 +75,17 @@ function render(item, me) {
     const head = document.createElement('header');
     head.className = 'topic-head';
 
-    const avatar = document.createElement('span');
+    const avatar = document.createElement('a');
     avatar.className = 'avatar';
-    avatar.textContent = String(item.userId);
+    avatar.href = `/user.html?id=${item.userId}`;
+    avatar.textContent = authorName(item).charAt(0).toUpperCase();
 
     const meta = document.createElement('div');
     meta.className = 'topic-meta';
-    const who = document.createElement('span');
+    const who = document.createElement('a');
     who.className = 'who';
-    who.textContent = `用户 #${item.userId}`;
+    who.href = `/user.html?id=${item.userId}`;
+    who.textContent = authorName(item);
     const time = document.createElement('time');
     time.className = 'tiny muted';
     time.textContent = formatTime(item.createdAt);

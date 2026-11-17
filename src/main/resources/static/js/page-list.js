@@ -5,7 +5,7 @@
  */
 
 import { api } from './api.js';
-import { formatTime, handleApiError, mountShell } from './shell.js';
+import { authorName, formatTime, handleApiError, mountShell } from './shell.js';
 
 const PAGE_SIZE = 10;
 const params = new URLSearchParams(location.search);
@@ -44,7 +44,12 @@ function rowEl(item, rank) {
 
     const meta = document.createElement('p');
     meta.className = 'row-meta';
-    meta.textContent = `${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`;
+    const author = document.createElement('a');
+    author.className = 'row-author';
+    author.href = `/user.html?id=${item.userId}`;
+    author.textContent = authorName(item);
+    meta.append(author);
+    meta.append(` · ${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`);
 
     if (rank) {
         const order = document.createElement('span');

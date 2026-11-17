@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>社区 · 用户主页</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<main class="layout narrow">
+    <section class="main-col">
+        <div class="card" id="profile"></div>
+        <ul class="rows" id="rows"></ul>
+
+        <div class="state" id="empty" hidden>
+            <p class="state-title">还没有发布内容</p>
+            <p class="state-sub">TA 还没有发过任何内容。</p>
+        </div>
+
+        <div class="more">
+            <button type="button" class="btn ghost" id="moreBtn" hidden>加载更多</button>
+        </div>
+    </section>
+</main>
+
+<noscript>这个页面用原生 JS 渲染，需要开启 JavaScript。</noscript>
+
+<script type="module" src="/js/page-user.js"></script>
+</body>
+</html>

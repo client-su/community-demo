@@ -9,28 +9,46 @@
 <body>
 
 <main class="layout narrow">
-    <section class="card">
-        <div class="me-head">
-            <span class="avatar lg" id="avatar"></span>
-            <div>
-                <h1 class="page-title" id="name"></h1>
-                <p class="muted tiny" id="username"></p>
+    <section class="main-col">
+        <div class="card">
+            <div class="me-head">
+                <span class="avatar lg" id="avatar"></span>
+                <div>
+                    <h1 class="page-title" id="name"></h1>
+                    <p class="muted tiny" id="username"></p>
+                </div>
             </div>
+
+            <dl class="kv">
+                <div><dt>注册时间</dt><dd id="createdAt">—</dd></div>
+                <div><dt>用户 ID</dt><dd id="userId">—</dd></div>
+            </dl>
+
+            <form class="nick-form" id="nickForm" novalidate>
+                <label>昵称
+                    <input id="nickname" name="nickname" maxlength="32" placeholder="≤32 位">
+                </label>
+                <button type="submit" class="btn primary" id="save">保存</button>
+            </form>
+
+            <button type="button" class="btn ghost" id="signout">退出登录</button>
         </div>
 
-        <dl class="kv">
-            <div><dt>注册时间</dt><dd id="createdAt">—</dd></div>
-            <div><dt>用户 ID</dt><dd id="userId">—</dd></div>
-        </dl>
+        <nav class="tabs" id="meTabs">
+            <a href="#" data-tab="contents" class="active">我发布的</a>
+            <a href="#" data-tab="likes">我赞过的</a>
+        </nav>
 
-        <form class="nick-form" id="nickForm" novalidate>
-            <label>昵称
-                <input id="nickname" name="nickname" maxlength="32" placeholder="≤32 位">
-            </label>
-            <button type="submit" class="btn primary" id="save">保存</button>
-        </form>
+        <ul class="rows" id="rows"></ul>
 
-        <button type="button" class="btn ghost" id="signout">退出登录</button>
+        <div class="state" id="empty" hidden>
+            <p class="state-title" id="emptyTitle">还没有内容</p>
+            <p class="state-sub" id="emptySub">去写点东西吧。</p>
+        </div>
+
+        <div class="more">
+            <button type="button" class="btn ghost" id="moreBtn" hidden>加载更多</button>
+        </div>
     </section>
 </main>
 

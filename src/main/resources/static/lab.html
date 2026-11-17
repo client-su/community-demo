@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>社区 · 工程能力演示</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<main class="layout narrow">
+    <section class="main-col">
+        <h1 class="page-title">工程能力演示</h1>
+        <p class="sub" style="margin: -6px 0 16px;">亲手撞出 429、重放幂等键，右下角请求面板会同步记录每次请求。</p>
+
+        <div class="lab-grid">
+            <section class="card">
+                <h2 class="docs-head" style="margin:0 0 4px;">限流：登录 5 次 / 分钟</h2>
+                <p class="lab-step">用错误密码连发 6 次登录，前 5 次 401，第 6 次触发 429。</p>
+                <label>用户名
+                    <input id="rateUser" value="demo_alice" autocomplete="off">
+                </label>
+                <label>密码
+                    <input id="ratePass" type="password" value="wrong-pass" autocomplete="off">
+                </label>
+                <button type="button" class="btn primary" id="rateBtn">连发 6 次登录</button>
+                <div class="lab-out" id="rateOut">点上面的按钮，看逐条结果。</div>
+            </section>
+
+            <section class="card">
+                <h2 class="docs-head" style="margin:0 0 4px;">幂等：同一份草稿只创建一条</h2>
+                <p class="lab-step">同一个幂等键点两次「发布」：首次 201，重放 200 且 id 不变。</p>
+                <label>正文
+                    <textarea id="idemBody" rows="3" placeholder="随便写点什么"></textarea>
+                </label>
+                <label>幂等键（8~64 位字母数字 _ -）
+                    <input id="idemKey" value="lab-demo-0001" autocomplete="off">
+                </label>
+                <button type="button" class="btn primary" id="idemBtn">发布</button>
+                <div class="lab-out" id="idemOut">点两次「发布」，对比状态码和 id。</div>
+            </section>
+        </div>
+    </section>
+</main>
+
+<noscript>这个页面用原生 JS 渲染，需要开启 JavaScript。</noscript>
+
+<script type="module" src="/js/page-lab.js"></script>
+</body>
+</html>

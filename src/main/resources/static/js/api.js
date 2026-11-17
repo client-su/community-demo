@@ -81,7 +81,7 @@ function emit(entry) {
 
 /* ---------- 核心请求 ---------- */
 
-async function request(method, path, { body, auth = false, idempotencyKey } = {}) {
+async function request(method, path, { body, auth = false, idempotencyKey, withMeta = false } = {}) {
     const headers = {};
     if (body !== undefined) {
         headers['Content-Type'] = 'application/json';
@@ -142,7 +142,10 @@ async function request(method, path, { body, auth = false, idempotencyKey } = {}
         });
     }
 
-    return payload.data;
+    // withMeta：演示页需要区分 201（首次创建）与 200（幂等重放）
+    return withMeta
+        ? { data: payload.data, status: response.status, traceId }
+        : payload.data;
 }
 
 /** 拼查询串：null/undefined 不参与，避免出现 ?cursor=null */
@@ -166,6 +169,8 @@ export const api = {
     detail: (id) => request('GET', `/api/contents/${id}`),
     publish: (body, idempotencyKey) =>
         request('POST', '/api/contents', { body: { body }, auth: true, idempotencyKey }),
+    publishMeta: (body, idempotencyKey) =>
+        request('POST', '/api/contents', { body: { body }, auth: true, idempotencyKey, withMeta: true }),
     remove: (id) => request('DELETE', `/api/contents/${id}`, { auth: true }),
 
     like: (id) => request('POST', `/api/contents/${id}/like`, { auth: true }),
@@ -173,4 +178,13 @@ export const api = {
     likeState: (id) => request('GET', `/api/contents/${id}/like`, { auth: true }),
 
     hot: (limit = 10) => request('GET', `/api/contents/hot${query({ limit })}`),
+
+    // 用户主页与「我的」维度（/api/users/* 匿名可看，/api/me/* 需要登录）
+    user: (id) => request('GET', `/api/users/${id}`),
+    userContents: (id, cursor, size = 10) =>
+        request('GET', `/api/users/${id}/contents${query({ cursor, size })}`),
+    myContents: (cursor, size = 10) =>
+        request('GET', `/api/me/contents${query({ cursor, size })}`, { auth: true }),
+    myLikes: (cursor, size = 10) =>
+        request('GET', `/api/me/likes${query({ cursor, size })}`, { auth: true }),
 };
