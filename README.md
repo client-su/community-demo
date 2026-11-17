@@ -4,7 +4,7 @@
 > 点赞与 Redis 热榜 → 限流与幂等。
 > 附一个同源前端页，clone 下来两条命令就能看到界面，以及每个请求的状态码。
 
-**13 个 REST 接口 · 14 个测试类 / 50 个用例 · 测试跑在真实 MySQL 8 + Redis 7 上，不 mock。**
+**17 个 REST 接口 · 14 个测试类 / 55 个用例 · 测试跑在真实 MySQL 8 + Redis 7 上，不 mock。**
 
 ## 界面
 
@@ -26,7 +26,7 @@
 ## 怎么自己验证
 
 ```bash
-mvn test    # 50 个用例。跑前 content / content_like 必须为空，见「快速开始」末尾的说明
+mvn test    # 55 个用例。跑前 content / content_like 必须为空，见「快速开始」末尾的说明
 ```
 
 ```bash
@@ -51,7 +51,6 @@ done; echo
 - 分页是游标式，**不支持跳到第 N 页**
 - 单机部署（内嵌 Tomcat + 单实例 Redis），**没有 CI、没有压测报告**
 - 前端是原生 JS 静态页，只用来展示接口行为，**没有前端测试**
-- 详情页作者显示为「用户 #id」：`ContentVO` 不带昵称字段，前端不编造
 
 ## 快速开始
 
@@ -91,7 +90,7 @@ redis-cli DEL hot:content               # 让热榜从 DB 重建
 
 ## 接口
 
-13 个接口，完整契约（请求体、响应体、错误码）见 [API.md](API.md)。
+17 个接口，完整契约（请求体、响应体、错误码）见 [API.md](API.md)。
 
 | 方法 | 路径 | 鉴权 | 说明 |
 | --- | --- | --- | --- |
@@ -108,6 +107,10 @@ redis-cli DEL hot:content               # 让热榜从 DB 重建
 | DELETE | `/api/contents/{id}/like` | 需要 | 取消点赞 |
 | GET | `/api/contents/{id}/like` | 需要 | 当前用户的点赞态 |
 | GET | `/api/contents/hot` | 匿名 | 热榜 Top N |
+| GET | `/api/users/{id}` | 匿名 | 公开资料 |
+| GET | `/api/users/{id}/contents` | 匿名 | 某人发布的内容 |
+| GET | `/api/me/contents` | 需要 | 我发布的 |
+| GET | `/api/me/likes` | 需要 | 我赞过的 |
 
 统一响应体：`{"code": 0, "message": "成功", "data": ...}`。
 `code` 非 0 时是 5 位业务错误码，前三位即对应的 HTTP 状态码（如 `40901` → 409）。
@@ -125,9 +128,9 @@ community/
 ├── src/main/resources/
 │   ├── application.yml
 │   └── static/          前端页（同源托管，零构建）
-├── src/test/java/com/community/   14 个测试类 / 50 个用例
+├── src/test/java/com/community/   14 个测试类 / 55 个用例
 ├── ARCHITECTURE.md               每条设计决策的问题、方案与代价
-├── API.md                        13 个接口的完整契约
+├── API.md                        17 个接口的完整契约
 ├── deploy/sql/
 │   ├── schema.sql       建表
 │   ├── seed-demo.sql    演示数据
@@ -144,7 +147,7 @@ community/
 mvn test
 ```
 
-14 个类 / 50 个用例，跑在真实的 MySQL + Redis 上（没有把存储 mock 掉）。
+14 个类 / 55 个用例，跑在真实的 MySQL + Redis 上（没有把存储 mock 掉）。
 
 | 关注点 | 用例在验什么 |
 | --- | --- |

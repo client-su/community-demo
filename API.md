@@ -1,6 +1,6 @@
 # 接口契约
 
-13 个接口。所有路径以 `/api` 开头，请求与响应都是 `application/json`。
+17 个接口。所有路径以 `/api` 开头，请求与响应都是 `application/json`。
 
 ## 一、通用约定
 
@@ -193,6 +193,44 @@ Authorization: Bearer <token>
 | 错误 | 说明 |
 | --- | --- |
 | `40000` | 一个字段都没传 → `至少提供一个要更新的字段`；`nickname` 全空白 → `nickname 不能为空白` |
+
+### 3.3 公开资料（用户主页）
+
+```
+GET /api/users/{id}
+```
+
+匿名可看。响应 `200`，`data` 为 `ProfileVO`。
+
+| 错误 | 说明 |
+| --- | --- |
+| `40400` | 用户不存在（**禁用账号与不存在返回同一个码**，防枚举） |
+
+### 3.4 某人发布的内容
+
+```
+GET /api/users/{id}/contents?cursor=&size=
+```
+
+匿名可看。响应 `200`，`data` 为 `PageResponse<ContentVO>`，游标分页语义同 `4.2`。
+
+### 3.5 我发布的
+
+```
+GET /api/me/contents?cursor=&size=
+Authorization: Bearer <token>
+```
+
+响应 `200`，`data` 为 `PageResponse<ContentVO>`。身份来自 token。
+
+### 3.6 我赞过的
+
+```
+GET /api/me/likes?cursor=&size=
+Authorization: Bearer <token>
+```
+
+响应 `200`，`data` 为 `PageResponse<ContentVO>`，按点赞先后倒序，游标为点赞记录 id。
 
 ---
 
