@@ -63,7 +63,7 @@ community/
 ├── src/main/resources/
 │   ├── application.yml
 │   └── static/          前端页（同源托管，零构建）
-├── src/test/java/com/community/   14 个测试类 / 55 个用例
+├── src/test/java/com/community/   16 个测试类 / 57 个用例
 ├── ARCHITECTURE.md               每条设计决策的问题、方案与代价
 ├── API.md                        17 个接口的完整契约
 ├── deploy/sql/
