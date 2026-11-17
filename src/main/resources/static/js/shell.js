@@ -163,7 +163,6 @@ const NAV = [
     { key: 'list', href: '/', text: '最新' },
     { key: 'hot', href: '/?tab=hot', text: '热榜' },
     { key: 'submit', href: '/submit.html', text: '写内容' },
-    { key: 'docs', href: '/docs.html', text: '接口' },
     { key: 'lab', href: '/lab.html', text: '演示' },
 ];
 
