@@ -21,7 +21,20 @@ const el = {
     submit: document.querySelector('#submit'),
     switch: document.querySelector('#switch'),
     nicknameRow: document.querySelector('#nicknameRow'),
+    demoTip: document.querySelector('#demoTip'),
+    demoFill: document.querySelector('#demoFill'),
 };
+
+/** 后端校验消息里的英文字段名 → 前端展示的中文名，避免把内部字段名透给用户 */
+const FIELD_LABELS = {
+    username: '用户名',
+    password: '密码',
+    nickname: '昵称',
+};
+
+function localizeMessage(message) {
+    return String(message || '').replace(/\b(username|password|nickname)\b/g, (m) => FIELD_LABELS[m]);
+}
 
 let mode = params.get('mode') === 'register' ? 'register' : 'login';
 let locked = false;
@@ -37,6 +50,8 @@ function renderMode() {
     el.nicknameRow.hidden = !registering;
     el.submit.textContent = registering ? '注册并登录' : '登录';
     el.switch.textContent = registering ? '已有账号，去登录' : '没有账号，去注册';
+    // 演示账号只在登录模式展示，注册模式不显示
+    el.demoTip.hidden = registering;
 }
 
 function countdown(seconds) {
@@ -73,6 +88,14 @@ el.switch.addEventListener('click', () => {
     el.form.elements.username.focus();
 });
 
+// 点击演示账号，直接填入用户名与密码
+el.demoFill.addEventListener('click', () => {
+    el.form.elements.username.value = 'demo_alice';
+    el.form.elements.password.value = 'Passw0rd!2026';
+    el.msg.textContent = '';
+    el.form.elements.password.focus();
+});
+
 el.form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (locked) return;
@@ -100,7 +123,7 @@ el.form.addEventListener('submit', async (event) => {
             countdown(error.retryAfter);
             return;
         }
-        el.msg.textContent = (error && error.message) || '操作失败';
+        el.msg.textContent = localizeMessage((error && error.message) || '操作失败');
         el.submit.disabled = false;
     }
 });

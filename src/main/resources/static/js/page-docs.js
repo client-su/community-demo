@@ -97,9 +97,11 @@ function renderErrorCodes() {
     const sec = section('错误码', '5 位 = HTTP 状态码(3位) + 同族序号(2位)');
     const list = el('div', 'ep-list');
     ERROR_CODES.forEach(([code, http, meaning]) => {
-        const row = el('div', 'ep-row');
-        row.append(el('code', 'ep-code', code));
-        row.append(el('span', 'ep-http', http));
+        const row = el('div', 'ec-row');
+        const left = el('span', 'ec-code');
+        left.append(el('code', null, code));
+        left.append(el('span', 'http', `/ ${http}`));
+        row.append(left);
         row.append(el('span', 'ep-note', meaning));
         list.append(row);
     });
@@ -111,7 +113,7 @@ function renderRedisRoles() {
     const sec = section('Redis 的 6 个角色', '一句话：DB 是真相，Redis 是加速与去重');
     const list = el('div', 'ep-list');
     REDIS_ROLES.forEach(([role, key, type, ttl]) => {
-        const row = el('div', 'ep-row');
+        const row = el('div', 'redis-row');
         row.append(el('span', 'ep-role', role));
         row.append(el('code', 'ep-path', key));
         row.append(el('span', 'ep-http', type));
@@ -123,17 +125,33 @@ function renderRedisRoles() {
 }
 
 function renderDecisions() {
-    const sec = section('10 条设计决策', '每条都写「问题 → 方案」，代价见 ARCHITECTURE.md');
+    const sec = section('10 条设计决策', '每条都是「问题 → 方案」，代价见 ARCHITECTURE.md');
     const list = el('ol', 'decision-list');
-    DECISIONS.forEach(([name, problem, solution]) => {
-        const li = el('li', null);
-        li.append(el('strong', null, name));
-        li.append(el('span', 'decision-problem', `问题：${problem}`));
-        li.append(el('span', 'decision-solution', `方案：${solution}`));
+    DECISIONS.forEach(([name, problem, solution], index) => {
+        const li = el('li', 'decision-card');
+
+        const head = el('div', 'decision-head');
+        head.append(el('span', 'decision-index', String(index + 1)));
+        head.append(el('h3', 'decision-name', name));
+
+        const flow = el('div', 'decision-flow');
+        flow.append(decisionPart('问题', problem, 'problem'));
+        flow.append(el('span', 'decision-arrow', '→'));
+        flow.append(decisionPart('方案', solution, 'solution'));
+
+        li.append(head, flow);
         list.append(li);
     });
     sec.append(list);
     return sec;
+}
+
+/** 问题 / 方案一栏：小标签 + 正文 */
+function decisionPart(label, text, kind) {
+    const part = el('div', `decision-part ${kind}`);
+    part.append(el('em', 'tag', label));
+    part.append(el('span', 'decision-text', text));
+    return part;
 }
 
 async function boot() {
