@@ -14,6 +14,7 @@ public enum ErrorCode {
     OK(0, "成功", HttpStatus.OK),
 
     BAD_REQUEST(40000, "参数校验失败", HttpStatus.BAD_REQUEST),
+    OLD_PASSWORD_MISMATCH(40001, "原密码不正确", HttpStatus.BAD_REQUEST),
 
     UNAUTHORIZED(40100, "未登录或登录已过期", HttpStatus.UNAUTHORIZED),
     INVALID_CREDENTIALS(40101, "用户名或密码错误", HttpStatus.UNAUTHORIZED),

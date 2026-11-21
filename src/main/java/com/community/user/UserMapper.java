@@ -49,4 +49,8 @@ public interface UserMapper {
     /** updated_at 由数据库的 ON UPDATE CURRENT_TIMESTAMP 自动维护 */
     @Update("UPDATE `user` SET nickname = #{nickname} WHERE id = #{id}")
     int updateNickname(@Param("id") Long id, @Param("nickname") String nickname);
+
+    /** 修改密码：只更新哈希列，明文不落库也不经手 */
+    @Update("UPDATE `user` SET password_hash = #{passwordHash} WHERE id = #{id}")
+    int updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
 }

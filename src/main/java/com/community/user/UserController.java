@@ -51,6 +51,15 @@ public class UserController {
         return Result.ok(userService.updateCurrentProfile(request));
     }
 
+    /** 修改密码：成功后当前 token 立即失效，前端按 401 引导重新登录 */
+    @PatchMapping("/me/password")
+    public Result<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @RequestAttribute(JwtAuthInterceptor.PAYLOAD_ATTRIBUTE) JwtPayload payload) {
+        userService.changePassword(request, payload);
+        return Result.ok();
+    }
+
     /** 公开资料：匿名可看（用户主页用） */
     @OptionalAuth
     @GetMapping("/users/{id}")

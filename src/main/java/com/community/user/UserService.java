@@ -1,10 +1,14 @@
 package com.community.user;
 
+import com.community.auth.JwtPayload;
 import com.community.common.BizException;
 import com.community.common.ErrorCode;
+import com.community.common.SecurityRedisService;
 import com.community.common.UserContext;
+import com.community.user.dto.ChangePasswordRequest;
 import com.community.user.dto.ProfileVO;
 import com.community.user.dto.UpdateProfileRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -13,9 +17,14 @@ import org.springframework.util.StringUtils;
 public class UserService {
 
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+    private final SecurityRedisService securityRedisService;
 
-    public UserService(UserMapper userMapper) {
+    public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
+                       SecurityRedisService securityRedisService) {
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
+        this.securityRedisService = securityRedisService;
     }
 
     /**
@@ -79,5 +88,26 @@ public class UserService {
         user.setNickname(nickname);
 
         return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
+    }
+
+    /**
+     * 修改密码：旧密码校验通过后更新哈希，并把当前 token 的 jti 拉黑，
+     * 强制本次登录态失效（客户端收到 401 后引导重新登录）。
+     *
+     * <p>只作废当前这张票：其他设备的 token 不感知，也不需要知道
+     * （项目没有“全部设备下线”的需求）。
+     */
+    @Transactional
+    public void changePassword(ChangePasswordRequest request, JwtPayload payload) {
+        long userId = UserContext.require();
+        User user = userMapper.findById(userId)
+                .orElseThrow(() -> new BizException(ErrorCode.UNAUTHORIZED, "账号不存在，请重新登录"));
+
+        if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
+            throw new BizException(ErrorCode.OLD_PASSWORD_MISMATCH);
+        }
+
+        userMapper.updatePassword(userId, passwordEncoder.encode(request.newPassword()));
+        securityRedisService.blacklistJti(payload.jti(), payload.expiresAt());
     }
 }
