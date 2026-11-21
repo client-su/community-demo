@@ -196,6 +196,8 @@ export const api = {
         request('GET', `/api/tags/${id}/contents${query({ cursor, size })}`),
 
     changePassword: (payload) => request('PATCH', '/api/me/password', { body: payload, auth: true }),
+    setUserStatus: (id, status) =>
+        request('PUT', `/api/admin/users/${id}/status`, { body: { status }, auth: true }),
 
     hot: (limit = 10) => request('GET', `/api/contents/hot${query({ limit })}`),
 

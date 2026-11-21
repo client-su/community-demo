@@ -164,6 +164,7 @@ const NAV = [
     { key: 'hot', href: '/?tab=hot', text: '热榜' },
     { key: 'submit', href: '/submit.html', text: '写内容' },
     { key: 'lab', href: '/lab.html', text: '演示' },
+    { key: 'admin', href: '/admin.html', text: '管理', adminOnly: true },
 ];
 
 function buildHeader(active) {
@@ -180,13 +181,6 @@ function buildHeader(active) {
 
     const nav = document.createElement('nav');
     nav.className = 'nav';
-    NAV.forEach((item) => {
-        const link = document.createElement('a');
-        link.href = item.href;
-        link.textContent = item.text;
-        if (item.key === active) link.classList.add('active');
-        nav.append(link);
-    });
 
     const authArea = document.createElement('div');
     authArea.className = 'auth-area';
@@ -194,7 +188,25 @@ function buildHeader(active) {
 
     inner.append(brand, nav, authArea);
     header.append(inner);
+
+    renderNav(active);
     return header;
+}
+
+/** 渲染顶栏导航：管理入口只对管理员显示（role 来自 /api/me 缓存，公开资料不返回） */
+function renderNav(active) {
+    const nav = document.querySelector('.nav');
+    if (!nav) return;
+    nav.replaceChildren();
+    const isAdmin = !!(cachedMe() && cachedMe().role === 1);
+    NAV.forEach((item) => {
+        if (item.adminOnly && !isAdmin) return;
+        const link = document.createElement('a');
+        link.href = item.href;
+        link.textContent = item.text;
+        if (item.key === active) link.classList.add('active');
+        nav.append(link);
+    });
 }
 
 
@@ -265,6 +277,7 @@ export async function mountShell({ active = '' } = {}) {
     if (getToken()) {
         await loadMe({ force: true });
         renderAuthArea();
+        renderNav(active);   // 登录校验完成后才知道 role，补一次导航渲染
     }
     return cachedMe();
 }

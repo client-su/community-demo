@@ -759,6 +759,13 @@ input:focus {
     border-bottom: 1px solid var(--line);
 }
 
+/* 管理页的封禁/解封按钮组 */
+.ban-actions {
+    display: flex;
+    gap: 8px;
+    margin: 4px 0 12px;
+}
+
 /* ---------- 搜索条（首页） ---------- */
 
 .searchbar {
