@@ -18,7 +18,7 @@ type(scope): 描述
 ```
 
 - **type**：`feat` | `fix` | `docs` | `refactor` | `test` | `chore` | `perf` | `build` | `revert`
-- **scope**：模块名，小写字母 / 数字 / 连字符，例如 `auth`、`content`、`like`、`redis`、`web`
+- **scope**：模块名，小写字母 / 数字 / 连字符，例如 `auth`、`content`、`comment`、`tag`、`bookmark`、`user`、`like`、`redis`、`web`
 - **描述**：冒号后空一格，写"做了什么"，不要写"修改了一些东西"
 
 正确示例：
@@ -51,7 +51,7 @@ feat(auth):加功能         # 冒号后必须空一格
 ## 4. 代码风格
 
 - 缩进 4 空格（YAML / JSON 为 2 空格），UTF-8，LF 换行，文件末尾留空行 —— 由 `.editorconfig` 约束。
-- 包结构按**能力**分（`auth`、`content`、`like`），不按技术层分（不建 `controller/`、`service/` 大杂烩目录）。
+- 包结构按**能力**分（`auth`、`user`、`content`、`comment`、`tag`、`bookmark`、`like`），不按技术层分（不建 `controller/`、`service/` 大杂烩目录）。
 - 不提交注释掉的死代码；不提交调试用的 `System.out.println`。
 - 每个 public 方法保持"做一件事"，参数超过 3 个考虑引入请求对象。
 
