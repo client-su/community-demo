@@ -38,8 +38,18 @@ export function contentRow(item, { rank = 0, showAuthor = false } = {}) {
         author.className = 'row-author';
         author.href = `/user.html?id=${item.userId}`;
         author.textContent = authorName(item);
-        meta.append(author);
-        meta.append(` · ${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`);
+
+        const time = document.createElement('span');
+        time.className = 'row-time';
+        time.textContent = formatTime(item.createdAt);
+
+        const stat = document.createElement('span');
+        stat.className = 'row-stat';
+        stat.textContent = `${item.likeCount ?? 0} 赞`;
+
+        // 普通列表看不到这些 span 的样式差异；热榜用 flex + gap 排版时，
+        // 这两个纯文本的「 · 」会被当作空白忽略，正好换成间距
+        meta.append(author, ' · ', time, ' · ', stat);
     } else {
         // 我的页 / 用户主页：不重复显示作者，元信息是一整串文本
         meta.textContent = `${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`;

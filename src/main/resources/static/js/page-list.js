@@ -59,10 +59,32 @@ const pager = createCursorPager({
 
 /* ---------------- 热榜 ---------------- */
 
+/** 页头里的条数占位：数据仍来自 loadHotRows 的返回值，这里只负责展示 */
+let hotCountEl = null;
+
+function renderHotHead() {
+    const head = document.createElement('header');
+    head.className = 'hot-head';
+
+    const title = document.createElement('h1');
+    const badge = document.createElement('span');
+    badge.className = 'hot-badge';
+    badge.textContent = 'TOP 5';
+    title.append('热榜', badge);
+
+    const note = document.createElement('p');
+    hotCountEl = document.createElement('span');
+    note.append('按点赞数排名 · ', hotCountEl, ' 条内容');
+
+    head.append(title, note);
+    document.querySelector('#tabs').before(head);
+}
+
 async function loadHotRows() {
     try {
-        const items = await api.hot(20);
+        const items = await api.hot(5);
         el.rows.replaceChildren(...items.map((item, index) => contentRow(item, { rank: index + 1, showAuthor: true })));
+        if (hotCountEl) hotCountEl.textContent = String(items.length);
         setEmpty(items.length === 0, '还没有点赞数据', '先在详情页点一个赞，这里就有排名了。');
     } catch (error) {
         handleApiError(error, '热榜加载失败');
@@ -91,14 +113,14 @@ function panel(title, note) {
 }
 
 async function renderSideHot() {
-    const section = panel('热榜 Top 10', '按点赞数');
+    const section = panel('热榜 Top 5', '按点赞数');
     const list = document.createElement('ol');
     list.className = 'side-hot';
     section.append(list);
     el.side.append(section);
 
     try {
-        const items = await api.hot(10);
+        const items = await api.hot(5);
         if (!items.length) {
             const li = document.createElement('li');
             li.className = 'muted tiny';
@@ -207,6 +229,8 @@ async function boot() {
         document.title = '社区 · 热榜';
         el.more.hidden = true;
         el.emptyAction.textContent = '去发布';
+        el.rows.classList.add('rows-hot');
+        renderHotHead();
         await Promise.all([loadHotRows(), Promise.resolve(renderSideAbout()), renderSideTags()]);
         return;
     }
