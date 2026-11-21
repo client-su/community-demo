@@ -72,6 +72,25 @@ CREATE TABLE IF NOT EXISTS `content_like` (
   COLLATE = utf8mb4_0900_ai_ci COMMENT = '点赞关系表';
 
 -- ------------------------------------------------------------
+-- 收藏关系表
+--   与 content_like 同构但语义不同：收藏是私有的「稍后看」，
+--   不参与 like_count、不进入热榜。
+--   uk_user_content (user_id, content_id) 一人一条：重复收藏由数据库拒绝
+--   idx_content     (content_id)          反向查询
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `bookmark` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键，同时作为游标',
+    `user_id`    BIGINT UNSIGNED NOT NULL                COMMENT '收藏者 id',
+    `content_id` BIGINT UNSIGNED NOT NULL                COMMENT '被收藏内容 id',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_content` (`user_id`, `content_id`),
+    KEY `idx_content` (`content_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT = '收藏关系表';
+
+-- ------------------------------------------------------------
 -- 评论表（一级评论：只挂内容，不支持楼中楼）
 --   idx_content_id (content_id, id) 某内容的评论列表：游标分页
 --   idx_user_id    (user_id, id)    某用户发出的评论（预留）

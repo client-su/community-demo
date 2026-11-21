@@ -1,5 +1,7 @@
 package com.community.content;
 
+import com.community.bookmark.BookmarkService;
+import com.community.bookmark.dto.BookmarkResult;
 import com.community.common.OptionalAuth;
 import com.community.common.Result;
 import com.community.content.dto.ContentVO;
@@ -29,10 +31,13 @@ public class ContentController {
 
     private final ContentService contentService;
     private final LikeService likeService;
+    private final BookmarkService bookmarkService;
 
-    public ContentController(ContentService contentService, LikeService likeService) {
+    public ContentController(ContentService contentService, LikeService likeService,
+                             BookmarkService bookmarkService) {
         this.contentService = contentService;
         this.likeService = likeService;
+        this.bookmarkService = bookmarkService;
     }
 
     @PostMapping
@@ -94,6 +99,24 @@ public class ContentController {
     @GetMapping("/{id}/like")
     public Result<LikeResult> likeState(@PathVariable long id) {
         return Result.ok(likeService.state(id));
+    }
+
+    /** 收藏（幂等）：重复收藏返回 200 且不产生重复行 */
+    @PostMapping("/{id}/bookmark")
+    public Result<BookmarkResult> bookmark(@PathVariable long id) {
+        return Result.ok(bookmarkService.add(id));
+    }
+
+    /** 取消收藏（幂等）：没收藏过也返回 200 */
+    @DeleteMapping("/{id}/bookmark")
+    public Result<BookmarkResult> unbookmark(@PathVariable long id) {
+        return Result.ok(bookmarkService.remove(id));
+    }
+
+    /** 查询收藏状态：前端用 bookmarked 渲染按钮 */
+    @GetMapping("/{id}/bookmark")
+    public Result<BookmarkResult> bookmarkState(@PathVariable long id) {
+        return Result.ok(bookmarkService.state(id));
     }
 
     /** 热榜：Top N 内容 */
