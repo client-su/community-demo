@@ -7,16 +7,22 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 拦截器直接单元测试：不启动 MVC 也能验证三条边界。
+ * 拦截器直接单元测试：不启动 MVC 也能验证鉴权边界。
+ *
+ * <p>封禁校验会按 userId 点查 user 表，涉及身份的用例必须插入真实用户行；
+ * @Transactional 让这些行在测试结束后自动回滚。
  */
 @SpringBootTest
+@Transactional
 class JwtAuthInterceptorTest {
 
     @Autowired
@@ -24,6 +30,9 @@ class JwtAuthInterceptorTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private final MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -38,6 +47,13 @@ class JwtAuthInterceptorTest {
             request.addHeader("Authorization", authHeader);
         }
         return request;
+    }
+
+    /** 插入一个真实用户，返回自增 id（status 默认 1 正常） */
+    private long newUser() {
+        String username = "itc_" + (System.currentTimeMillis() % 1_000_000);
+        jdbcTemplate.update("INSERT INTO `user` (username, password_hash) VALUES (?, 'x')", username);
+        return jdbcTemplate.queryForObject("SELECT id FROM `user` WHERE username = ?", Long.class, username);
     }
 
     @Test
@@ -66,17 +82,44 @@ class JwtAuthInterceptorTest {
 
     @Test
     void validTokenPassesAndSetsContext() {
-        String token = jwtService.issue(99L).token();
+        long userId = newUser();
+        String token = jwtService.issue(userId).token();
 
         boolean pass = interceptor.preHandle(request("Bearer " + token), response, new Object());
 
         assertThat(pass).isTrue();
-        assertThat(UserContext.get()).isEqualTo(99L);
+        assertThat(UserContext.get()).isEqualTo(userId);
         System.out.println("合法 token -> 放行，UserContext.userId = " + UserContext.get());
 
         interceptor.afterCompletion(request("Bearer " + token), response, new Object(), null);
         assertThat(UserContext.get()).isNull();
         System.out.println("afterCompletion 后 UserContext = " + UserContext.get());
+    }
+
+    @Test
+    void tokenOfDeletedUserIs401() {
+        // 一个从未存在的 userId：验签通过但查无此人 -> 401（登录态失效）
+        long ghostId = 999_999_000L;
+        String token = jwtService.issue(ghostId).token();
+
+        assertThatThrownBy(() -> interceptor.preHandle(request("Bearer " + token), response, new Object()))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getErrorCode())
+                .isEqualTo(ErrorCode.UNAUTHORIZED);
+        System.out.println("已删除用户的 token -> 401");
+    }
+
+    @Test
+    void tokenOfBannedUserIs403() {
+        long userId = newUser();
+        jdbcTemplate.update("UPDATE `user` SET status = 0 WHERE id = ?", userId);
+        String token = jwtService.issue(userId).token();
+
+        assertThatThrownBy(() -> interceptor.preHandle(request("Bearer " + token), response, new Object()))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+        System.out.println("被封禁用户的 token -> 403");
     }
 
     @Test

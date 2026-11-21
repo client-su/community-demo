@@ -110,4 +110,32 @@ public class UserService {
         userMapper.updatePassword(userId, passwordEncoder.encode(request.newPassword()));
         securityRedisService.blacklistJti(payload.jti(), payload.expiresAt());
     }
+
+    /**
+     * 封禁/解封用户（仅管理员）。
+     *
+     * <p>目标不能是自己：防止把最后一个管理员锁在门外。
+     * 封禁立即生效——鉴权拦截器每请求点查 status。
+     */
+    @Transactional
+    public void setUserStatus(long targetId, int status) {
+        long adminId = requireAdmin();
+        if (adminId == targetId) {
+            throw new BizException(ErrorCode.FORBIDDEN, "不能封禁自己");
+        }
+        userMapper.findById(targetId)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "用户不存在"));
+        userMapper.updateStatus(targetId, status);
+    }
+
+    /** 当前用户必须是管理员；不是抛 403。返回管理员 id 供调用方使用 */
+    private long requireAdmin() {
+        long userId = UserContext.require();
+        User user = userMapper.findById(userId)
+                .orElseThrow(() -> new BizException(ErrorCode.UNAUTHORIZED, "账号不存在，请重新登录"));
+        if (!user.isAdmin()) {
+            throw new BizException(ErrorCode.FORBIDDEN, "需要管理员权限");
+        }
+        return userId;
+    }
 }

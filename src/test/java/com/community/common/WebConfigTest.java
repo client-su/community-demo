@@ -8,7 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,9 +22,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 验证白名单划分：受保护路径必须带 token，白名单路径与 /actuator 不受影响。
  * 用一个测试专用端点 /api/ping 来代表"任意受保护业务接口"。
+ *
+ * <p>@Transactional：涉及签发 token 的用例要插入真实用户行（封禁校验点查 user 表），
+ * 结束后自动回滚。
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class WebConfigTest {
 
     @Autowired
@@ -30,6 +36,9 @@ class WebConfigTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @TestConfiguration
     static class PingConfig {
@@ -57,11 +66,16 @@ class WebConfigTest {
 
     @Test
     void protectedPathWithValidTokenIs200() throws Exception {
-        String token = jwtService.issue(7L).token();
+        String username = "webcfg_" + (System.currentTimeMillis() % 1_000_000);
+        jdbcTemplate.update("INSERT INTO `user` (username, password_hash) VALUES (?, 'x')", username);
+        long userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM `user` WHERE username = ?", Long.class, username);
+
+        String token = jwtService.issue(userId).token();
         mockMvc.perform(get("/api/ping").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(7));
-        System.out.println("GET /api/ping 带合法 token -> 200 / data=7（身份来自 token）");
+                .andExpect(jsonPath("$.data").value(userId));
+        System.out.println("GET /api/ping 带合法 token -> 200 / data=" + userId + "（身份来自 token）");
     }
 
     @Test

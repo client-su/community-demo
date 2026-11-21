@@ -34,7 +34,8 @@ class SchemaExistsTest {
         System.out.println("应用连上的库: " + schema);
         System.out.println("库中的表: " + tables);
 
-        assertThat(tables).contains("user", "content", "content_like");
+        assertThat(tables).contains("user", "content", "content_like",
+                "comment", "bookmark", "tag", "content_tag");
     }
 
     @Test

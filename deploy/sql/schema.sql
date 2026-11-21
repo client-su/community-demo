@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `password_hash` VARCHAR(100)    NOT NULL                COMMENT 'BCrypt 哈希（60 字符），字段名即约定：不存明文',
     `nickname`      VARCHAR(32)     NOT NULL DEFAULT ''     COMMENT '昵称',
     `status`        TINYINT         NOT NULL DEFAULT 1      COMMENT '1 正常 / 0 禁用',
+    `role`          TINYINT         NOT NULL DEFAULT 0      COMMENT '0 普通 / 1 管理员',
     `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),

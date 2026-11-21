@@ -5,6 +5,8 @@ import com.community.common.ErrorCode;
 import com.community.common.OptionalAuth;
 import com.community.common.SecurityRedisService;
 import com.community.common.UserContext;
+import com.community.user.User;
+import com.community.user.UserMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,10 +16,11 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * 鉴权拦截器：取票 → 验票 → 记身份。
+ * 鉴权拦截器：取票 → 验票 → 查黑名单 → 查封禁 → 记身份。
  *
- * <p>不做的事：不查库判断用户是否被封禁（那是每个请求都访问数据库的成本，
- * 需要时用 Redis 缓存状态或把状态写进 token 并配合短 TTL）。
+ * <p>封禁校验按主键点查一次 user.status（DB 是唯一真相）。
+ * 这是对早期「不查库判断封禁」取舍的有意反转：当时没有封禁管理功能，
+ * 如今正确性优先，代价是每个已登录请求多一次点查，演示规模可接受。
  */
 @Component
 public class JwtAuthInterceptor implements HandlerInterceptor {
@@ -30,10 +33,13 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
     private final JwtService jwtService;
     private final SecurityRedisService securityRedisService;
+    private final UserMapper userMapper;
 
-    public JwtAuthInterceptor(JwtService jwtService, SecurityRedisService securityRedisService) {
+    public JwtAuthInterceptor(JwtService jwtService, SecurityRedisService securityRedisService,
+                              UserMapper userMapper) {
         this.jwtService = jwtService;
         this.securityRedisService = securityRedisService;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -68,6 +74,15 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         // 验签通过后再查黑名单：先挡掉伪造请求，避免拿垃圾 token 打 Redis
         if (securityRedisService.isBlacklisted(payload.jti())) {
             throw new BizException(ErrorCode.UNAUTHORIZED, "登录已失效，请重新登录");
+        }
+
+        // 封禁校验（DB 唯一真相）：账号被删 → 登录态失效；被禁用 → 403 统一提示
+        Integer status = userMapper.findStatusById(payload.userId()).orElse(null);
+        if (status == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED, "账号不存在，请重新登录");
+        }
+        if (status != User.STATUS_ACTIVE) {
+            throw new BizException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }
 
         UserContext.set(payload.userId());

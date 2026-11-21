@@ -18,14 +18,22 @@ public class User {
     private String passwordHash;
     private String nickname;
     private Integer status;
+    private Integer role;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     /** 1 正常 / 0 禁用 */
     public static final int STATUS_ACTIVE = 1;
 
+    /** 1 管理员 / 0 普通用户 */
+    public static final int ROLE_ADMIN = 1;
+
     public boolean isActive() {
         return status != null && status == STATUS_ACTIVE;
+    }
+
+    public boolean isAdmin() {
+        return role != null && role == ROLE_ADMIN;
     }
 
     public Long getId() {
@@ -68,6 +76,14 @@ public class User {
         this.status = status;
     }
 
+    public Integer getRole() {
+        return role;
+    }
+
+    public void setRole(Integer role) {
+        this.role = role;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -88,6 +104,6 @@ public class User {
     @Override
     public String toString() {
         return "User{id=" + id + ", username='" + username + "', nickname='" + nickname
-                + "', status=" + status + '}';
+                + "', status=" + status + ", role=" + role + '}';
     }
 }

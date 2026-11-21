@@ -20,14 +20,14 @@ public interface UserMapper {
 
     /** 列名显式列出，避免以后加列把整个表结构变化带进查询 */
     @Select("""
-            SELECT id, username, password_hash, nickname, status, created_at, updated_at
+            SELECT id, username, password_hash, nickname, status, role, created_at, updated_at
               FROM `user`
              WHERE username = #{username}
             """)
     Optional<User> findByUsername(@Param("username") String username);
 
     @Select("""
-            SELECT id, username, password_hash, nickname, status, created_at, updated_at
+            SELECT id, username, password_hash, nickname, status, role, created_at, updated_at
               FROM `user`
              WHERE id = #{id}
             """)
@@ -53,4 +53,12 @@ public interface UserMapper {
     /** 修改密码：只更新哈希列，明文不落库也不经手 */
     @Update("UPDATE `user` SET password_hash = #{passwordHash} WHERE id = #{id}")
     int updatePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
+
+    /** status: 1 正常 / 0 禁用（封禁/解封） */
+    @Update("UPDATE `user` SET status = #{status} WHERE id = #{id}")
+    int updateStatus(@Param("id") Long id, @Param("status") int status);
+
+    /** 鉴权拦截器用：只取 status，不拉 password_hash（封禁校验的最小查询） */
+    @Select("SELECT status FROM `user` WHERE id = #{id}")
+    Optional<Integer> findStatusById(@Param("id") long id);
 }

@@ -27,6 +27,10 @@ INSERT IGNORE INTO `user` (`username`, `password_hash`, `nickname`) VALUES
     ('demo_carol', '$2a$10$KiYuBkmar3OcHLakhitJ8.PbEDGHaP.rc2KLLBCKIt/mY.z39rpKq', 'Carol'),
     ('demo_dave',  '$2a$10$KiYuBkmar3OcHLakhitJ8.PbEDGHaP.rc2KLLBCKIt/mY.z39rpKq', 'Dave');
 
+-- 管理员账号（role=1），用来演示封禁/解封；密码与其他演示账号一致
+INSERT IGNORE INTO `user` (`username`, `password_hash`, `nickname`, `role`) VALUES
+    ('demo_admin', '$2a$10$KiYuBkmar3OcHLakhitJ8.PbEDGHaP.rc2KLLBCKIt/mY.z39rpKq', 'Admin', 1);
+
 -- ------------------------------------------------------------
 -- 内容：作者 id 用子查询取，不能硬编码自增 id
 --       idem_key 固定，重复执行会被 uk_user_idem 挡掉
