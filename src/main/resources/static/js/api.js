@@ -166,6 +166,8 @@ export const api = {
     updateProfile: (payload) => request('PATCH', '/api/me', { body: payload, auth: true }),
 
     feed: (cursor, size = 10) => request('GET', `/api/contents${query({ cursor, size })}`),
+    search: (q, cursor, size = 10) =>
+        request('GET', `/api/contents/search${query({ q, cursor, size })}`),
     detail: (id) => request('GET', `/api/contents/${id}`),
     publish: (body, idempotencyKey) =>
         request('POST', '/api/contents', { body: { body }, auth: true, idempotencyKey }),

@@ -759,6 +759,20 @@ input:focus {
     border-bottom: 1px solid var(--line);
 }
 
+/* ---------- 搜索条（首页） ---------- */
+
+.searchbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.searchbar input {
+    flex: 1;
+    margin-top: 0;
+}
+
 /* ---------- 评论区（详情页） ---------- */
 
 .comments {

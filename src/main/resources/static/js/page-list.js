@@ -10,6 +10,8 @@ import { authorName, formatTime, handleApiError, mountShell } from './shell.js';
 const PAGE_SIZE = 10;
 const params = new URLSearchParams(location.search);
 const tab = params.get('tab') === 'hot' ? 'hot' : 'list';
+const q = (params.get('q') || '').trim();
+const mode = q ? 'search' : tab;
 
 const el = {
     rows: document.querySelector('#rows'),
@@ -19,6 +21,9 @@ const el = {
     emptyAction: document.querySelector('#emptyAction'),
     more: document.querySelector('#moreBtn'),
     side: document.querySelector('#side'),
+    searchForm: document.querySelector('#searchForm'),
+    searchInput: document.querySelector('#searchInput'),
+    clearSearch: document.querySelector('#clearSearch'),
 };
 
 const state = {
@@ -78,7 +83,9 @@ async function loadList(reset) {
     state.loading = true;
     el.more.disabled = true;
     try {
-        const page = await api.feed(reset ? null : state.cursor, PAGE_SIZE);
+        const page = await (mode === 'search'
+            ? api.search(q, reset ? null : state.cursor, PAGE_SIZE)
+            : api.feed(reset ? null : state.cursor, PAGE_SIZE));
         state.cursor = page.nextCursor;
         state.hasMore = page.hasMore;
         if (reset) el.rows.replaceChildren();
@@ -217,7 +224,21 @@ async function boot() {
         return;
     }
 
-    document.title = '社区 · 最新';
+    if (mode === 'search') {
+        document.title = `社区 · 搜索「${q}」`;
+        el.searchInput.value = q;
+        el.clearSearch.hidden = false;
+        setEmpty(false);
+    } else {
+        document.title = '社区 · 最新';
+    }
+
+    el.searchForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const value = el.searchInput.value.trim();
+        location.href = value ? `/?q=${encodeURIComponent(value)}` : '/';
+    });
+
     el.more.addEventListener('click', () => loadList(false));
     await Promise.all([loadList(true), renderSideHot()]);
 }

@@ -10,6 +10,13 @@
 
 <main class="layout">
     <section class="main-col">
+        <form class="searchbar" id="searchForm">
+            <input type="search" id="searchInput" name="q" maxlength="64"
+                   placeholder="搜索内容（中文按 2 字分词）">
+            <button type="submit" class="btn primary sm">搜索</button>
+            <a class="btn ghost sm" id="clearSearch" href="/" hidden>✕ 清除</a>
+        </form>
+
         <nav class="tabs" id="tabs">
             <a href="/" data-tab="list">最新</a>
             <a href="/?tab=hot" data-tab="hot">热榜</a>
