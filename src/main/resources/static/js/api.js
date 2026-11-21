@@ -195,6 +195,8 @@ export const api = {
     tagContents: (id, cursor, size = 10) =>
         request('GET', `/api/tags/${id}/contents${query({ cursor, size })}`),
 
+    changePassword: (payload) => request('PATCH', '/api/me/password', { body: payload, auth: true }),
+
     hot: (limit = 10) => request('GET', `/api/contents/hot${query({ limit })}`),
 
     // 用户主页与「我的」维度（/api/users/* 匿名可看，/api/me/* 需要登录）

@@ -31,6 +31,17 @@
                 <button type="submit" class="btn primary" id="save">保存</button>
             </form>
 
+            <form class="nick-form" id="pwdForm" novalidate>
+                <label>原密码
+                    <input type="password" id="oldPassword" autocomplete="current-password">
+                </label>
+                <label>新密码（8~64 位）
+                    <input type="password" id="newPassword" minlength="8" maxlength="64" autocomplete="new-password">
+                </label>
+                <button type="submit" class="btn primary" id="pwdSave">修改密码</button>
+                <p class="muted tiny">改密成功后当前登录立即失效，需要重新登录。</p>
+            </form>
+
             <button type="button" class="btn ghost" id="signout">退出登录</button>
         </div>
 

@@ -2,8 +2,8 @@
  * 「我的」页：看资料 + 改昵称 + 退出，加上「我发布的 / 我赞过的」两个 tab。
  */
 
-import { api } from './api.js';
-import { cacheMe, formatDate, formatTime, handleApiError, initial, mountShell, refreshAuthArea, signOut, toast } from './shell.js';
+import { api, setToken } from './api.js';
+import { cacheMe, clearMe, formatDate, formatTime, handleApiError, initial, mountShell, refreshAuthArea, signOut, toast } from './shell.js';
 
 const PAGE_SIZE = 10;
 
@@ -16,6 +16,10 @@ const el = {
     form: document.querySelector('#nickForm'),
     nickname: document.querySelector('#nickname'),
     save: document.querySelector('#save'),
+    pwdForm: document.querySelector('#pwdForm'),
+    oldPassword: document.querySelector('#oldPassword'),
+    newPassword: document.querySelector('#newPassword'),
+    pwdSave: document.querySelector('#pwdSave'),
     signout: document.querySelector('#signout'),
     rows: document.querySelector('#rows'),
     empty: document.querySelector('#empty'),
@@ -39,6 +43,33 @@ function paint(me) {
     el.createdAt.textContent = formatDate(me.createdAt) || '—';
     el.userId.textContent = String(me.id);
     el.nickname.value = me.nickname || '';
+}
+
+async function savePassword(event) {
+    event.preventDefault();
+    const oldPassword = el.oldPassword.value;
+    const newPassword = el.newPassword.value;
+    if (!oldPassword) {
+        toast('请输入原密码', 'error');
+        return;
+    }
+    if (newPassword.length < 8 || newPassword.length > 64) {
+        toast('新密码长度需 8~64 位', 'error');
+        return;
+    }
+    el.pwdSave.disabled = true;
+    try {
+        await api.changePassword({ oldPassword, newPassword });
+        toast('密码已修改');
+        // 改密成功后当前 token 已被服务端拉黑：清本地登录态，引导重新登录
+        setToken('');
+        clearMe();
+        const params = new URLSearchParams({ next: '/me.html', hint: '密码已修改，请重新登录' });
+        location.href = `/login.html?${params}`;
+    } catch (error) {
+        handleApiError(error, '修改失败');
+        el.pwdSave.disabled = false;
+    }
 }
 
 async function save(event) {
@@ -134,6 +165,7 @@ async function boot() {
     }
     paint(me);
     el.form.addEventListener('submit', save);
+    el.pwdForm.addEventListener('submit', savePassword);
     el.signout.addEventListener('click', signOut);
 
     document.querySelectorAll('#meTabs a').forEach((a) => {
