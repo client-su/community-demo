@@ -11,8 +11,9 @@ import { authorName, cachedMe, formatTime, handleApiError, mountShell, toast } f
 const id = Number(new URLSearchParams(location.search).get('id'));
 const root = document.querySelector('#topic');
 
-const state = { item: null, liked: false, likeCount: 0, commentCount: 0, busy: false };
+const state = { item: null, liked: false, likeCount: 0, bookmarked: false, commentCount: 0, busy: false };
 let likeBtn = null;
+let bookmarkBtn = null;
 
 function stateBlock(title, sub) {
     const box = document.createElement('div');
@@ -57,6 +58,33 @@ async function toggleLike() {
     } finally {
         state.busy = false;
         likeBtn.disabled = false;
+    }
+}
+
+function paintBookmark() {
+    if (!bookmarkBtn) return;
+    bookmarkBtn.classList.toggle('bookmarked', state.bookmarked);
+    bookmarkBtn.textContent = state.bookmarked ? '已收藏' : '收藏';
+}
+
+async function toggleBookmark() {
+    if (state.busy) return;
+    if (!cachedMe()) {
+        const params = new URLSearchParams({ next: `/topic.html?id=${id}`, hint: '收藏需要先登录' });
+        location.href = `/login.html?${params}`;
+        return;
+    }
+    state.busy = true;
+    bookmarkBtn.disabled = true;
+    try {
+        const result = state.bookmarked ? await api.unbookmark(id) : await api.bookmark(id);
+        state.bookmarked = result.bookmarked;
+        paintBookmark();
+    } catch (error) {
+        handleApiError(error, '操作失败');
+    } finally {
+        state.busy = false;
+        bookmarkBtn.disabled = false;
     }
 }
 
@@ -105,6 +133,13 @@ function render(item, me) {
     likeBtn.addEventListener('click', toggleLike);
     paintLike();
     actions.append(likeBtn);
+
+    bookmarkBtn = document.createElement('button');
+    bookmarkBtn.type = 'button';
+    bookmarkBtn.className = 'like bookmark';
+    bookmarkBtn.addEventListener('click', toggleBookmark);
+    paintBookmark();
+    actions.append(bookmarkBtn);
 
     if (me && me.id === item.userId) {
         const del = document.createElement('button');
@@ -160,6 +195,13 @@ async function boot() {
             paintLike();
         } catch (error) {
             // 拿不到点赞态不影响读正文
+        }
+        try {
+            const bookmark = await api.bookmarkState(id);
+            state.bookmarked = bookmark.bookmarked;
+            paintBookmark();
+        } catch (error) {
+            // 拿不到收藏态不影响读正文
         }
     }
 

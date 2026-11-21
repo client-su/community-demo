@@ -812,6 +812,14 @@ input:focus {
     border-radius: 999px;
 }
 
+/* ---------- 收藏按钮（复用 .like 的轮廓，换一个高亮态） ---------- */
+
+.like.bookmark.bookmarked {
+    background: #fdf3e3;
+    border-color: #f0c98a;
+    color: #b9781c;
+}
+
 /* ---------- 评论区（详情页） ---------- */
 
 .comments {

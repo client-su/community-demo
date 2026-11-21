@@ -179,6 +179,12 @@ export const api = {
     unlike: (id) => request('DELETE', `/api/contents/${id}/like`, { auth: true }),
     likeState: (id) => request('GET', `/api/contents/${id}/like`, { auth: true }),
 
+    bookmark: (id) => request('POST', `/api/contents/${id}/bookmark`, { auth: true }),
+    unbookmark: (id) => request('DELETE', `/api/contents/${id}/bookmark`, { auth: true }),
+    bookmarkState: (id) => request('GET', `/api/contents/${id}/bookmark`, { auth: true }),
+    myBookmarks: (cursor, size = 10) =>
+        request('GET', `/api/me/bookmarks${query({ cursor, size })}`, { auth: true }),
+
     comments: (id, cursor, size = 10) =>
         request('GET', `/api/contents/${id}/comments${query({ cursor, size })}`),
     comment: (id, body) =>

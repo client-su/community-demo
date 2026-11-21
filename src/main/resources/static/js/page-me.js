@@ -95,13 +95,16 @@ async function loadList(reset) {
     try {
         const page = tab === 'contents'
             ? await api.myContents(reset ? null : state.cursor, PAGE_SIZE)
-            : await api.myLikes(reset ? null : state.cursor, PAGE_SIZE);
+            : tab === 'likes'
+                ? await api.myLikes(reset ? null : state.cursor, PAGE_SIZE)
+                : await api.myBookmarks(reset ? null : state.cursor, PAGE_SIZE);
         state.cursor = page.nextCursor;
         state.hasMore = page.hasMore;
         if (reset) el.rows.replaceChildren();
         page.items.forEach((item) => el.rows.append(rowEl(item)));
         el.more.hidden = !page.hasMore;
-        const emptyTitle = tab === 'contents' ? '还没有发布内容' : '还没有赞过内容';
+        const emptyTitle = tab === 'contents' ? '还没有发布内容'
+            : tab === 'likes' ? '还没有赞过内容' : '还没有收藏内容';
         setEmpty(el.rows.children.length === 0, emptyTitle, '');
     } catch (error) {
         handleApiError(error, '加载失败');
