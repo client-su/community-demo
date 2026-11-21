@@ -8,6 +8,7 @@ import com.community.content.dto.CreateContentRequest;
 import com.community.content.dto.PageResponse;
 import com.community.content.dto.PublishResult;
 import com.community.like.HotRankService;
+import com.community.tag.TagService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -54,13 +55,16 @@ public class ContentService {
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
     private final HotRankService hotRankService;
+    private final TagService tagService;
 
     public ContentService(ContentMapper contentMapper, StringRedisTemplate redis,
-                          ObjectMapper objectMapper, HotRankService hotRankService) {
+                          ObjectMapper objectMapper, HotRankService hotRankService,
+                          TagService tagService) {
         this.contentMapper = contentMapper;
         this.redis = redis;
         this.objectMapper = objectMapper;
         this.hotRankService = hotRankService;
+        this.tagService = tagService;
     }
 
     private ContentVO toVO(Content c) {
@@ -161,6 +165,10 @@ public class ContentService {
             content.setDeleted(Content.NOT_DELETED);
 
             contentMapper.insert(content);
+
+            // 绑定标签（可选）：与内容插入同一事务，标签非法会连内容一起回滚；
+            // 幂等重放不会走到这里（uk_user_idem 冲突走下面的 replay 分支）
+            tagService.bind(content.getId(), request.tagIds());
 
             // INSERT 只回填自增主键，created_at 由数据库默认值生成，拿不到。
             // 回读一次（走主键）拿权威时间——比在 Java 里 LocalDateTime.now() 更可信，
