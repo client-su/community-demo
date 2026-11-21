@@ -38,7 +38,8 @@ public class UserService {
         if (!user.isActive()) {
             throw new BizException(ErrorCode.NOT_FOUND, "用户不存在");
         }
-        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
+        // 公开资料不暴露别人的角色：role 恒为 null，管理身份只对本人可见
+        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), null, user.getCreatedAt());
     }
 
     /**
@@ -58,7 +59,7 @@ public class UserService {
             throw new BizException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }
 
-        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
+        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getRole(), user.getCreatedAt());
     }
 
     /**
@@ -87,7 +88,7 @@ public class UserService {
         userMapper.updateNickname(userId, nickname);
         user.setNickname(nickname);
 
-        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getCreatedAt());
+        return new ProfileVO(user.getId(), user.getUsername(), user.getNickname(), user.getRole(), user.getCreatedAt());
     }
 
     /**

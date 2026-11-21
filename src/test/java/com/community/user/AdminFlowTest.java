@@ -169,4 +169,22 @@ class AdminFlowTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40000));
     }
+
+    @Test
+    void profileExposesRoleOnlyToSelf() throws Exception {
+        // 管理员看自己：role = 1
+        mockMvc.perform(get("/api/me").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value(1));
+
+        // 普通用户看自己：role = 0
+        mockMvc.perform(get("/api/me").header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value(0));
+
+        // 匿名看公开资料：role 恒为 null，不暴露管理身份
+        mockMvc.perform(get("/api/users/" + adminId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").isEmpty());
+    }
 }
