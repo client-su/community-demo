@@ -167,7 +167,7 @@ const NAV = [
     { key: 'admin', href: '/admin.html', text: '管理', adminOnly: true },
 ];
 
-function buildHeader(active) {
+function buildHeader() {
     const header = document.createElement('header');
     header.className = 'topbar';
 
@@ -188,8 +188,6 @@ function buildHeader(active) {
 
     inner.append(brand, nav, authArea);
     header.append(inner);
-
-    renderNav(active);
     return header;
 }
 
@@ -264,7 +262,10 @@ export function refreshAuthArea() {
  * 先用缓存渲染，再后台校验，避免刷新时顶栏闪一下"登录"。
  */
 export async function mountShell({ active = '' } = {}) {
-    document.body.prepend(buildHeader(active));
+    document.body.prepend(buildHeader());
+    // 顶栏挂进文档后 renderNav 才能查到 .nav；必须无条件渲染，
+    // 否则没有 token 的首次访客会看到空导航（登录态校验里那次补渲染跑不到）
+    renderNav(active);
     renderAuthArea();
     mountRequestPanel();
 
