@@ -177,6 +177,12 @@ export const api = {
     unlike: (id) => request('DELETE', `/api/contents/${id}/like`, { auth: true }),
     likeState: (id) => request('GET', `/api/contents/${id}/like`, { auth: true }),
 
+    comments: (id, cursor, size = 10) =>
+        request('GET', `/api/contents/${id}/comments${query({ cursor, size })}`),
+    comment: (id, body) =>
+        request('POST', `/api/contents/${id}/comments`, { body: { body }, auth: true }),
+    removeComment: (id) => request('DELETE', `/api/comments/${id}`, { auth: true }),
+
     hot: (limit = 10) => request('GET', `/api/contents/hot${query({ limit })}`),
 
     // 用户主页与「我的」维度（/api/users/* 匿名可看，/api/me/* 需要登录）

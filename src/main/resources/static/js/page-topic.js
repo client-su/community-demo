@@ -11,7 +11,7 @@ import { authorName, cachedMe, formatTime, handleApiError, mountShell, toast } f
 const id = Number(new URLSearchParams(location.search).get('id'));
 const root = document.querySelector('#topic');
 
-const state = { item: null, liked: false, likeCount: 0, busy: false };
+const state = { item: null, liked: false, likeCount: 0, commentCount: 0, busy: false };
 let likeBtn = null;
 
 function stateBlock(title, sub) {
@@ -147,10 +147,11 @@ async function boot() {
 
     state.item = item;
     state.likeCount = item.likeCount ?? 0;
+    state.commentCount = item.commentCount ?? 0;
     document.title = `社区 · ${String(item.body || '').slice(0, 20)}`;
     render(item, me);
 
-    // 登录态才查点赞状态：匿名调这个接口仍会 401
+    // 登录态才查点赞/收藏状态：匿名调这两个接口仍会 401
     if (me) {
         try {
             const result = await api.likeState(id);
@@ -161,6 +162,159 @@ async function boot() {
             // 拿不到点赞态不影响读正文
         }
     }
+
+    await renderComments(me);
+}
+
+/* ---------------- 评论 ---------------- */
+
+const commentsRoot = document.querySelector('#comments');
+const commentState = { cursor: null, hasMore: false, loading: false };
+let commentListEl = null;
+let commentCountEl = null;
+
+function commentEl(comment, me) {
+    const li = document.createElement('li');
+    li.className = 'comment-item';
+
+    const head = document.createElement('p');
+    head.className = 'comment-meta';
+    const who = document.createElement('a');
+    who.className = 'row-author';
+    who.href = `/user.html?id=${comment.userId}`;
+    who.textContent = comment.nickname || `用户 #${comment.userId}`;
+    const time = document.createElement('span');
+    time.textContent = formatTime(comment.createdAt);
+    head.append(who, document.createTextNode(' · '), time);
+
+    if (me && me.id === comment.userId) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn ghost sm';
+        del.textContent = '删除';
+        del.addEventListener('click', async () => {
+            if (!window.confirm('删除这条评论？')) return;
+            try {
+                await api.removeComment(comment.id);
+                li.remove();
+                state.commentCount = Math.max(0, state.commentCount - 1);
+                if (commentCountEl) commentCountEl.textContent = `评论 ${state.commentCount}`;
+                if (!commentListEl.children.length) showNoComments();
+            } catch (error) {
+                handleApiError(error, '删除失败');
+            }
+        });
+        head.append(del);
+    }
+
+    const body = document.createElement('p');
+    body.className = 'comment-body';
+    body.textContent = comment.body;
+
+    li.append(head, body);
+    return li;
+}
+
+function showNoComments() {
+    if (!commentListEl || commentListEl.children.length) return;
+    const li = document.createElement('li');
+    li.className = 'muted tiny';
+    li.textContent = '还没有评论，来说两句。';
+    commentListEl.append(li);
+}
+
+async function renderComments(me) {
+    commentsRoot.textContent = '';
+
+    const head = document.createElement('header');
+    head.className = 'comments-head';
+    const h = document.createElement('h2');
+    h.className = 'comments-title';
+    commentCountEl = h;
+    h.textContent = `评论 ${state.commentCount}`;
+    head.append(h);
+    commentsRoot.append(head);
+
+    commentListEl = document.createElement('ul');
+    commentListEl.className = 'comment-list';
+    commentsRoot.append(commentListEl);
+
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'btn ghost sm';
+    more.textContent = '加载更多';
+    more.hidden = true;
+    commentsRoot.append(more);
+
+    const form = document.createElement('form');
+    form.className = 'comment-form';
+    if (me) {
+        const textarea = document.createElement('textarea');
+        textarea.maxLength = 1000;
+        textarea.placeholder = '说点什么…（Ctrl / ⌘ + Enter 发送）';
+        const send = document.createElement('button');
+        send.type = 'submit';
+        send.className = 'btn primary sm';
+        send.textContent = '发表评论';
+        form.append(textarea, send);
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const body = textarea.value.trim();
+            if (!body) return;
+            send.disabled = true;
+            try {
+                const created = await api.comment(id, body);
+                // 新评论 id 最大，按 id 倒序应插在最前
+                commentListEl.querySelector('.muted.tiny')?.remove();
+                commentListEl.prepend(commentEl(created, me));
+                textarea.value = '';
+                state.commentCount += 1;
+                if (commentCountEl) commentCountEl.textContent = `评论 ${state.commentCount}`;
+            } catch (error) {
+                handleApiError(error, '评论失败');
+            } finally {
+                send.disabled = false;
+            }
+        });
+        textarea.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+    } else {
+        const login = document.createElement('a');
+        login.className = 'btn ghost sm';
+        const params = new URLSearchParams({ next: `/topic.html?id=${id}`, hint: '评论需要先登录' });
+        login.href = `/login.html?${params}`;
+        login.textContent = '登录后可以评论';
+        form.append(login);
+    }
+    commentsRoot.append(form);
+
+    const load = async (reset) => {
+        if (commentState.loading) return;
+        commentState.loading = true;
+        more.disabled = true;
+        try {
+            const page = await api.comments(id, reset ? null : commentState.cursor, 10);
+            commentState.cursor = page.nextCursor;
+            commentState.hasMore = page.hasMore;
+            if (reset) commentListEl.replaceChildren();
+            page.items.forEach((comment) => commentListEl.append(commentEl(comment, me)));
+            more.hidden = !page.hasMore;
+            if (!commentListEl.children.length) showNoComments();
+        } catch (error) {
+            handleApiError(error, '评论加载失败');
+            if (!commentListEl.children.length) showNoComments();
+        } finally {
+            commentState.loading = false;
+            more.disabled = false;
+        }
+    };
+    more.addEventListener('click', () => load(false));
+    await load(true);
 }
 
 boot();
