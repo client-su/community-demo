@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS `content` (
     `body`       TEXT            NOT NULL                COMMENT '正文',
     `deleted`    TINYINT         NOT NULL DEFAULT 0      COMMENT '0 正常 / 1 已删（软删）',
     `like_count` INT UNSIGNED    NOT NULL DEFAULT 0      COMMENT '点赞数，DB 为唯一真相',
+    `comment_count` INT UNSIGNED NOT NULL DEFAULT 0      COMMENT '评论数，DB 为唯一真相',
     `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -68,3 +69,22 @@ CREATE TABLE IF NOT EXISTS `content_like` (
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT = '点赞关系表';
+
+-- ------------------------------------------------------------
+-- 评论表（一级评论：只挂内容，不支持楼中楼）
+--   idx_content_id (content_id, id) 某内容的评论列表：游标分页
+--   idx_user_id    (user_id, id)    某用户发出的评论（预留）
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `comment` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键，同时作为游标',
+    `content_id` BIGINT UNSIGNED NOT NULL                COMMENT '被评论内容 id',
+    `user_id`    BIGINT UNSIGNED NOT NULL                COMMENT '评论者 id',
+    `body`       TEXT            NOT NULL                COMMENT '评论正文',
+    `deleted`    TINYINT         NOT NULL DEFAULT 0      COMMENT '0 正常 / 1 已删（软删）',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_content_id` (`content_id`, `id`),
+    KEY `idx_user_id` (`user_id`, `id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT = '评论表';

@@ -20,6 +20,7 @@ public class Content {
     private String body;
     private Integer deleted;
     private Integer likeCount;
+    private Integer commentCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -80,6 +81,14 @@ public class Content {
 
     public void setLikeCount(Integer likeCount) {
         this.likeCount = likeCount;
+    }
+
+    public Integer getCommentCount() {
+        return commentCount;
+    }
+
+    public void setCommentCount(Integer commentCount) {
+        this.commentCount = commentCount;
     }
 
     public LocalDateTime getCreatedAt() {

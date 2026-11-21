@@ -22,7 +22,7 @@ public interface ContentMapper {
 
     /** 详情：软删的内容视为不存在 */
     @Select("""
-            SELECT c.id, c.user_id, c.idem_key, c.body, c.deleted, c.like_count, c.created_at, c.updated_at,
+            SELECT c.id, c.user_id, c.idem_key, c.body, c.deleted, c.like_count, c.comment_count, c.created_at, c.updated_at,
                    u.nickname
               FROM `content` c
               LEFT JOIN `user` u ON u.id = c.user_id
@@ -39,7 +39,7 @@ public interface ContentMapper {
      * cursor 传 Long.MAX_VALUE 表示第一页——用参数表达分支，避免动态 SQL。
      */
     @Select("""
-            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+            SELECT c.id, c.user_id, c.body, c.like_count, c.comment_count, c.created_at, c.updated_at,
                    u.nickname
               FROM `content` c
               LEFT JOIN `user` u ON u.id = c.user_id
@@ -55,7 +55,7 @@ public interface ContentMapper {
      * 走 idx_user_id(user_id) + id 反向扫描。
      */
     @Select("""
-            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+            SELECT c.id, c.user_id, c.body, c.like_count, c.comment_count, c.created_at, c.updated_at,
                    u.nickname
               FROM `content` c
               LEFT JOIN `user` u ON u.id = c.user_id
@@ -85,7 +85,7 @@ public interface ContentMapper {
 
     @Select("""
             <script>
-            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+            SELECT c.id, c.user_id, c.body, c.like_count, c.comment_count, c.created_at, c.updated_at,
                    u.nickname
               FROM `content` c
               LEFT JOIN `user` u ON u.id = c.user_id
@@ -100,7 +100,7 @@ public interface ContentMapper {
 
     /** 幂等重放查询：按 (user_id, idem_key) 定位唯一的那条 */
     @Select("""
-            SELECT c.id, c.user_id, c.idem_key, c.body, c.deleted, c.like_count, c.created_at, c.updated_at,
+            SELECT c.id, c.user_id, c.idem_key, c.body, c.deleted, c.like_count, c.comment_count, c.created_at, c.updated_at,
                    u.nickname
               FROM `content` c
               LEFT JOIN `user` u ON u.id = c.user_id
@@ -127,9 +127,24 @@ public interface ContentMapper {
             """)
     int addLikeCount(@Param("id") long id, @Param("delta") int delta);
 
+    /**
+     * 评论计数加减，永不小于 0。与 addLikeCount 同款保护：
+     * comment_count 是 INT UNSIGNED，裸减在 0 上会报 1690，
+     * 先 CAST 成有符号再算，最后用 GREATEST 夹到 0。
+     *
+     * @param delta +1 发评论 / -1 删评论
+     */
+    @Update("""
+            UPDATE `content`
+               SET comment_count = GREATEST(CAST(comment_count AS SIGNED) + #{delta}, 0)
+             WHERE id = #{id}
+               AND deleted = 0
+            """)
+    int addCommentCount(@Param("id") long id, @Param("delta") int delta);
+
     /** 热榜重建用：按赞数取 Top N（走 idx_deleted_id 过滤 + 文件排序，低频调用可接受） */
     @Select("""
-            SELECT c.id, c.user_id, c.body, c.like_count, c.created_at, c.updated_at,
+            SELECT c.id, c.user_id, c.body, c.like_count, c.comment_count, c.created_at, c.updated_at,
                    u.nickname
               FROM `content` c
               LEFT JOIN `user` u ON u.id = c.user_id

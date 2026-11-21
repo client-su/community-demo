@@ -167,7 +167,7 @@ public class LikeService {
 
         List<ContentVO> items = rows.stream()
                 .map(r -> new ContentVO(r.getId(), r.getUserId(), r.getNickname(),
-                        r.getBody(), r.getLikeCount(), r.getCreatedAt()))
+                        r.getBody(), r.getLikeCount(), r.getCommentCount(), r.getCreatedAt()))
                 .toList();
 
         Long nextCursor = hasMore ? rows.get(rows.size() - 1).getLikeId() : null;

@@ -65,7 +65,7 @@ public class ContentService {
 
     private ContentVO toVO(Content c) {
         return new ContentVO(c.getId(), c.getUserId(), c.getNickname(),
-                c.getBody(), c.getLikeCount(), c.getCreatedAt());
+                c.getBody(), c.getLikeCount(), c.getCommentCount(), c.getCreatedAt());
     }
 
     private String cacheKey(long id) {
@@ -385,7 +385,13 @@ public class ContentService {
 
     private ContentVO fromJson(String json) {
         try {
-            return objectMapper.readValue(json, ContentVO.class);
+            ContentVO vo = objectMapper.readValue(json, ContentVO.class);
+            // 旧缓存（评论功能上线前写入）不含 commentCount，反序列化为 null，归一为 0
+            if (vo.commentCount() == null) {
+                return new ContentVO(vo.id(), vo.userId(), vo.nickname(),
+                        vo.body(), vo.likeCount(), 0, vo.createdAt());
+            }
+            return vo;
         } catch (JsonProcessingException e) {
             // 缓存脏数据：删掉让它下次回源
             log.warn("detail 反序列化失败，删除脏缓存", e);

@@ -22,6 +22,7 @@ public enum ErrorCode {
 
     NOT_FOUND(40400, "请求的资源不存在", HttpStatus.NOT_FOUND),
     CONTENT_NOT_FOUND(40401, "内容不存在或已删除", HttpStatus.NOT_FOUND),
+    COMMENT_NOT_FOUND(40402, "评论不存在或已删除", HttpStatus.NOT_FOUND),
 
     METHOD_NOT_ALLOWED(40500, "请求方法不支持", HttpStatus.METHOD_NOT_ALLOWED),
 

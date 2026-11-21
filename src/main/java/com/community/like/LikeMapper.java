@@ -56,7 +56,7 @@ public interface LikeMapper {
      */
     @Select("""
             SELECT l.id AS like_id,
-                   c.id, c.user_id, c.body, c.like_count, c.created_at,
+                   c.id, c.user_id, c.body, c.like_count, c.comment_count, c.created_at,
                    u.nickname
               FROM `content_like` l
               JOIN `content` c ON c.id = l.content_id AND c.deleted = 0

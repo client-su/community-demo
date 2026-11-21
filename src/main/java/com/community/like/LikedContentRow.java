@@ -14,6 +14,7 @@ public class LikedContentRow {
     private String nickname;
     private String body;
     private Integer likeCount;
+    private Integer commentCount;
     private LocalDateTime createdAt;
 
     public Long getLikeId() {
@@ -62,6 +63,14 @@ public class LikedContentRow {
 
     public void setLikeCount(Integer likeCount) {
         this.likeCount = likeCount;
+    }
+
+    public Integer getCommentCount() {
+        return commentCount;
+    }
+
+    public void setCommentCount(Integer commentCount) {
+        this.commentCount = commentCount;
     }
 
     public LocalDateTime getCreatedAt() {

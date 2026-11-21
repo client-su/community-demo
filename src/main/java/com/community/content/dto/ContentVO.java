@@ -7,5 +7,5 @@ import java.time.LocalDateTime;
  *
  * @param nickname 作者昵称，由查询 JOIN user 表填充；可能为 null（用户被删时），前端需兜底。
  */
-public record ContentVO(Long id, Long userId, String nickname, String body, Integer likeCount, LocalDateTime createdAt) {
+public record ContentVO(Long id, Long userId, String nickname, String body, Integer likeCount, Integer commentCount, LocalDateTime createdAt) {
 }
