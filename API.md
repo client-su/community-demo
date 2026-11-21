@@ -178,9 +178,12 @@ Authorization: Bearer <token>
 {
   "code": 0,
   "message": "成功",
-  "data": { "id": 1, "username": "demo_alice", "nickname": "Alice", "createdAt": "2026-11-15T19:51:24" }
+  "data": { "id": 1, "username": "demo_alice", "nickname": "Alice", "role": 0, "createdAt": "2026-11-15T19:51:24" }
 }
 ```
+
+`role`：`0` 普通用户 / `1` 管理员。只有 `GET /api/me` 与 `PATCH /api/me` 返回真实值；
+`GET /api/users/{id}` 的公开资料恒为 `null`，不把别人的管理身份暴露给任意访客。
 
 ### 3.2 更新资料（部分更新）
 

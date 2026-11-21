@@ -1,12 +1,13 @@
 -- ============================================================
--- 演示数据：4 个用户 / 8 条内容 / 9 条点赞
+-- 演示数据：5 个用户（含 1 个管理员）/ 8 条内容 / 9 条点赞
 --
 -- 用法（先起好库里已有表）：
 --   mysql -uroot -p < deploy/sql/seed-demo.sql
 --   redis-cli DEL hot:content      # 让热榜从 DB 重建，否则可能还是旧缓存
 --
 -- 演示账号（密码都是 Passw0rd!2026）：
---   demo_alice / demo_bob / demo_carol / demo_dave
+--   demo_alice / demo_bob / demo_carol / demo_dave   （普通用户）
+--   demo_admin                                        （管理员，可封禁/解封）
 --
 -- 两个刻意的取舍：
 -- 1. 全部 INSERT IGNORE：靠唯一键（uk_username / uk_user_idem / uk_user_content）

@@ -12,8 +12,6 @@
 - 右下角 **请求日志**：每次调用显示「方法 路径 状态码 traceId 耗时」，可以现场撞出 `429`，
   也能看到幂等重放返回的 `200`
 
-![登录页：演示账号一键填充](screenshots/limit.png)
-
 ![演示页：连错 6 次触发 429 与幂等重放](screenshots/lab.png)
 
 ## 快速开始
@@ -68,7 +66,7 @@ community/
 ├── src/main/resources/
 │   ├── application.yml
 │   └── static/          前端页（同源托管，零构建）
-├── src/test/java/com/community/   25 个测试类 / 98 个用例
+├── src/test/java/com/community/   25 个测试类 / 100 个用例
 ├── ARCHITECTURE.md               每条设计决策的问题、方案与代价
 ├── API.md                        29 个接口的完整契约
 ├── deploy/sql/
