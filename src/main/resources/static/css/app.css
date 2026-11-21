@@ -773,6 +773,45 @@ input:focus {
     margin-top: 0;
 }
 
+/* ---------- 标签选择（发布页）与标签面板 ---------- */
+
+.tag-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+}
+
+.chip {
+    padding: 4px 12px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--text-2);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.chip.on {
+    background: var(--accent-weak);
+    border-color: #cfdefb;
+    color: var(--accent);
+}
+
+.chips a.on {
+    color: var(--accent);
+    background: var(--accent-weak);
+    border-radius: 999px;
+}
+
 /* ---------- 评论区（详情页） ---------- */
 
 .comments {

@@ -14,9 +14,11 @@ const el = {
     count: document.querySelector('#count'),
     submit: document.querySelector('#submit'),
     hint: document.querySelector('#hint'),
+    tagPicker: document.querySelector('#tagPicker'),
 };
 
 let draft = { key: '', body: '' };
+const selectedTags = new Set();
 
 function newKey() {
     return crypto.randomUUID
@@ -45,7 +47,8 @@ async function submit(event) {
     el.submit.disabled = true;
     el.hint.textContent = '发布中…';
     try {
-        const created = await api.publish(body, keyForDraft(body));
+        const tagIds = [...selectedTags];
+        const created = await api.publish(body, keyForDraft(body), tagIds.length ? tagIds : null);
         toast('已发布');
         location.href = `/topic.html?id=${created.id}`;
     } catch (error) {
@@ -54,6 +57,31 @@ async function submit(event) {
         handleApiError(error, '发布失败');
         syncState();
     }
+}
+
+function renderTags(tags) {
+    el.tagPicker.replaceChildren();
+    if (!tags.length) return;
+    const label = document.createElement('span');
+    label.className = 'tiny muted';
+    label.textContent = '标签（可选）：';
+    el.tagPicker.append(label);
+    tags.forEach((tag) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = tag.name;
+        chip.addEventListener('click', () => {
+            if (selectedTags.has(tag.id)) {
+                selectedTags.delete(tag.id);
+                chip.classList.remove('on');
+            } else {
+                selectedTags.add(tag.id);
+                chip.classList.add('on');
+            }
+        });
+        el.tagPicker.append(chip);
+    });
 }
 
 async function boot() {
@@ -74,6 +102,13 @@ async function boot() {
     el.form.addEventListener('submit', submit);
     syncState();
     el.body.focus();
+
+    el.tagPicker.textContent = '加载标签…';
+    try {
+        renderTags(await api.tags());
+    } catch (error) {
+        el.tagPicker.textContent = '标签加载失败（不影响发布）';
+    }
 }
 
 boot();

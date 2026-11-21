@@ -11,7 +11,9 @@ const PAGE_SIZE = 10;
 const params = new URLSearchParams(location.search);
 const tab = params.get('tab') === 'hot' ? 'hot' : 'list';
 const q = (params.get('q') || '').trim();
-const mode = q ? 'search' : tab;
+const tagId = Number(params.get('tag'));
+// 三种数据源共用一套行式条目与游标逻辑：信息流 / 搜索 / 按标签
+const mode = q ? 'search' : (Number.isInteger(tagId) && tagId > 0 ? 'tag' : tab);
 
 const el = {
     rows: document.querySelector('#rows'),
@@ -85,7 +87,9 @@ async function loadList(reset) {
     try {
         const page = await (mode === 'search'
             ? api.search(q, reset ? null : state.cursor, PAGE_SIZE)
-            : api.feed(reset ? null : state.cursor, PAGE_SIZE));
+            : mode === 'tag'
+                ? api.tagContents(tagId, reset ? null : state.cursor, PAGE_SIZE)
+                : api.feed(reset ? null : state.cursor, PAGE_SIZE));
         state.cursor = page.nextCursor;
         state.hasMore = page.hasMore;
         if (reset) el.rows.replaceChildren();
@@ -207,6 +211,37 @@ function renderSideAbout() {
     el.side.append(section);
 }
 
+/** 侧边标签面板：点标签跳 /?tag=<id>，与搜索共用同一套行式列表 */
+async function renderSideTags() {
+    const section = panel('按标签浏览', '预置标签');
+    const list = document.createElement('ul');
+    list.className = 'chips';
+    section.append(list);
+    el.side.append(section);
+
+    try {
+        const tags = await api.tags();
+        if (!tags.length) {
+            const li = document.createElement('li');
+            li.className = 'muted tiny';
+            li.textContent = '暂无标签';
+            list.append(li);
+            return;
+        }
+        tags.forEach((tag) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `/?tag=${tag.id}`;
+            a.textContent = tag.name;
+            if (mode === 'tag' && tag.id === tagId) a.className = 'on';
+            li.append(a);
+            list.append(li);
+        });
+    } catch (error) {
+        // 标签面板失败不影响主列表
+    }
+}
+
 /* ---------------- 启动 ---------------- */
 
 async function boot() {
@@ -220,7 +255,7 @@ async function boot() {
         document.title = '社区 · 热榜';
         el.more.hidden = true;
         el.emptyAction.textContent = '去发布';
-        await Promise.all([loadHotRows(), Promise.resolve(renderSideAbout())]);
+        await Promise.all([loadHotRows(), Promise.resolve(renderSideAbout()), renderSideTags()]);
         return;
     }
 
@@ -229,6 +264,9 @@ async function boot() {
         el.searchInput.value = q;
         el.clearSearch.hidden = false;
         setEmpty(false);
+    } else if (mode === 'tag') {
+        document.title = '社区 · 标签';
+        el.clearSearch.hidden = false;
     } else {
         document.title = '社区 · 最新';
     }
@@ -240,7 +278,7 @@ async function boot() {
     });
 
     el.more.addEventListener('click', () => loadList(false));
-    await Promise.all([loadList(true), renderSideHot()]);
+    await Promise.all([loadList(true), renderSideHot(), renderSideTags()]);
 }
 
 boot();

@@ -169,8 +169,8 @@ export const api = {
     search: (q, cursor, size = 10) =>
         request('GET', `/api/contents/search${query({ q, cursor, size })}`),
     detail: (id) => request('GET', `/api/contents/${id}`),
-    publish: (body, idempotencyKey) =>
-        request('POST', '/api/contents', { body: { body }, auth: true, idempotencyKey }),
+    publish: (body, idempotencyKey, tagIds = null) =>
+        request('POST', '/api/contents', { body: { body, tagIds }, auth: true, idempotencyKey }),
     publishMeta: (body, idempotencyKey) =>
         request('POST', '/api/contents', { body: { body }, auth: true, idempotencyKey, withMeta: true }),
     remove: (id) => request('DELETE', `/api/contents/${id}`, { auth: true }),
@@ -184,6 +184,10 @@ export const api = {
     comment: (id, body) =>
         request('POST', `/api/contents/${id}/comments`, { body: { body }, auth: true }),
     removeComment: (id) => request('DELETE', `/api/comments/${id}`, { auth: true }),
+
+    tags: () => request('GET', '/api/tags'),
+    tagContents: (id, cursor, size = 10) =>
+        request('GET', `/api/tags/${id}/contents${query({ cursor, size })}`),
 
     hot: (limit = 10) => request('GET', `/api/contents/hot${query({ limit })}`),
 
