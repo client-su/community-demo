@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS `content` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_user_idem` (`user_id`, `idem_key`),
     KEY `idx_deleted_id` (`deleted`, `id`),
-    KEY `idx_user_id` (`user_id`)
+    KEY `idx_user_id` (`user_id`),
+    FULLTEXT KEY `ft_body` (`body`) WITH PARSER ngram
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT = '内容表';

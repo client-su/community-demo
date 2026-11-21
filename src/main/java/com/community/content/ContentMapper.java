@@ -69,6 +69,26 @@ public interface ContentMapper {
                              @Param("cursor") long cursor, @Param("size") int size);
 
     /**
+     * 关键词搜索：MySQL FULLTEXT + ngram 分词，中文可用。
+     *
+     * <p>MATCH 必须在 WHERE 里（不能挪到 SELECT），否则不走 ft_body 索引。
+     * 结果与 feed 同构地按 id 游标倒序，避免搜索结果随翻页漂移。
+     */
+    @Select("""
+            SELECT c.id, c.user_id, c.body, c.like_count, c.comment_count, c.created_at, c.updated_at,
+                   u.nickname
+              FROM `content` c
+              LEFT JOIN `user` u ON u.id = c.user_id
+             WHERE c.deleted = 0
+               AND MATCH(c.body) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE)
+               AND c.id < #{cursor}
+             ORDER BY c.id DESC
+             LIMIT #{size}
+            """)
+    List<Content> search(@Param("keyword") String keyword,
+                         @Param("cursor") long cursor, @Param("size") int size);
+
+    /**
      * 软删：存在性 + 归属 + 未删 三重校验一次性完成。
      *
      * <p>不写“先查再判”是因为那会引入 TOCTOU 竞态窗口；

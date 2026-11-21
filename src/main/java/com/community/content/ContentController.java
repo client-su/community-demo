@@ -54,6 +54,19 @@ public class ContentController {
         return Result.ok(contentService.feed(cursor, size));
     }
 
+    /**
+     * 关键词搜索：结果同样游标分页。
+     * 声明在 /{id} 之前只是为阅读清晰：Spring 会优先字面量路径，二者并不冲突。
+     */
+    @OptionalAuth
+    @GetMapping("/search")
+    public Result<PageResponse<ContentVO>> search(
+            @RequestParam String q,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.ok(contentService.search(q, cursor, size));
+    }
+
     @OptionalAuth
     @GetMapping("/{id}")
     public Result<ContentVO> detail(@PathVariable long id) {

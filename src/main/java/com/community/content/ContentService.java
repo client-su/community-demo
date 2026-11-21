@@ -259,6 +259,33 @@ public class ContentService {
     }
 
     /**
+     * 关键词搜索：不缓存（实时性优先，演示数据量下无性能压力）。
+     *
+     * <p>分页与 feed 同构：id 游标倒序，多取一条判 hasMore。
+     * 搜索语义与“无限流”不同，但排序稳定即可保证翻页不重不漏。
+     */
+    public PageResponse<ContentVO> search(String keyword, Long cursor, Integer size) {
+        String kw = keyword == null ? "" : keyword.trim();
+        if (kw.isEmpty() || kw.length() > 64) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "搜索关键词长度需在 1-64 之间");
+        }
+
+        int limit = (size == null || size < 1) ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+        long effectiveCursor = (cursor == null) ? Long.MAX_VALUE : cursor;
+
+        List<Content> rows = contentMapper.search(kw, effectiveCursor, limit + 1);
+
+        boolean hasMore = rows.size() > limit;
+        if (hasMore) {
+            rows = rows.subList(0, limit);
+        }
+
+        List<ContentVO> items = rows.stream().map(this::toVO).toList();
+        Long nextCursor = hasMore ? rows.get(rows.size() - 1).getId() : null;
+        return new PageResponse<>(items, nextCursor, hasMore);
+    }
+
+    /**
      * 详情：cache-aside。
      *
      * <p>读缓存 → 未命中查库 → 回写缓存。
