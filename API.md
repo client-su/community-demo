@@ -1,6 +1,6 @@
 # 接口契约
 
-17 个接口。所有路径以 `/api` 开头，请求与响应都是 `application/json`。
+29 个接口。所有路径以 `/api` 开头，请求与响应都是 `application/json`。
 
 ## 一、通用约定
 
@@ -26,11 +26,14 @@
 | --- | --- | --- |
 | `0` | 200 | 成功 |
 | `40000` | 400 | 参数校验失败（响应 `message` 会指出具体字段） |
+| `40001` | 400 | 原密码不正确 |
 | `40100` | 401 | 未登录 / 登录已过期 / 缺少 Bearer 令牌 |
 | `40101` | 401 | 用户名或密码错误 |
-| `40300` | 403 | 没有操作权限 |
+| `40300` | 403 | 没有操作权限 / 账号已被禁用 |
 | `40400` | 404 | 请求的资源不存在 |
 | `40401` | 404 | 内容不存在或已删除 |
+| `40402` | 404 | 评论不存在或已删除 |
+| `40403` | 404 | 标签不存在 |
 | `40500` | 405 | 请求方法不支持 |
 | `40900` | 409 | 资源冲突（唯一键冲突兜底） |
 | `40901` | 409 | 用户名已被占用 |
@@ -40,7 +43,7 @@
 
 ### 1.3 鉴权
 
-除 `register` / `login` 与三个只读内容接口外，其余接口都需要携带：
+除 `register` / `login` 与标注「匿名可读」的接口外，其余接口都需要携带：
 
 ```
 Authorization: Bearer <token>
@@ -52,7 +55,11 @@ Authorization: Bearer <token>
 
 ### 1.4 匿名可读（`@OptionalAuth`）
 
-`GET /api/contents`、`GET /api/contents/{id}`、`GET /api/contents/hot` 三个只读接口：
+只读接口匿名可看（带了合法 token 仍识别身份）：
+
+`GET /api/contents`、`GET /api/contents/{id}`、`GET /api/contents/hot`、`GET /api/contents/search`、
+`GET /api/contents/{id}/comments`、`GET /api/tags`、`GET /api/tags/{id}/contents`、
+`GET /api/users/{id}`、`GET /api/users/{id}/contents`
 
 | 请求头 | 行为 |
 | --- | --- |
@@ -194,7 +201,32 @@ Authorization: Bearer <token>
 | --- | --- |
 | `40000` | 一个字段都没传 → `至少提供一个要更新的字段`；`nickname` 全空白 → `nickname 不能为空白` |
 
-### 3.3 公开资料（用户主页）
+### 3.3 修改密码
+
+```
+PATCH /api/me/password
+Authorization: Bearer <token>
+```
+
+请求：
+
+```json
+{ "oldPassword": "Passw0rd!2026", "newPassword": "NewPassw0rd!2026" }
+```
+
+| 字段 | 必填 | 规则 |
+| --- | --- | --- |
+| `oldPassword` | 是 | 非空 |
+| `newPassword` | 是 | 8~64 位 |
+
+响应 `200`，`data` 为 `null`。**成功后当前 token 立即失效**（jti 进黑名单），客户端按 `40100` 引导重新登录；其他设备的 token 不受影响。
+
+| 错误 | 说明 |
+| --- | --- |
+| `40001` | 原密码不正确 |
+| `40000` | 新密码不合规 |
+
+### 3.4 公开资料（用户主页）
 
 ```
 GET /api/users/{id}
@@ -206,7 +238,7 @@ GET /api/users/{id}
 | --- | --- |
 | `40400` | 用户不存在（**禁用账号与不存在返回同一个码**，防枚举） |
 
-### 3.4 某人发布的内容
+### 3.5 某人发布的内容
 
 ```
 GET /api/users/{id}/contents?cursor=&size=
@@ -214,7 +246,7 @@ GET /api/users/{id}/contents?cursor=&size=
 
 匿名可看。响应 `200`，`data` 为 `PageResponse<ContentVO>`，游标分页语义同 `4.2`。
 
-### 3.5 我发布的
+### 3.6 我发布的
 
 ```
 GET /api/me/contents?cursor=&size=
@@ -223,7 +255,7 @@ Authorization: Bearer <token>
 
 响应 `200`，`data` 为 `PageResponse<ContentVO>`。身份来自 token。
 
-### 3.6 我赞过的
+### 3.7 我赞过的
 
 ```
 GET /api/me/likes?cursor=&size=
@@ -247,8 +279,10 @@ Idempotency-Key: <可选，8~64 位>
 请求：
 
 ```json
-{ "body": "第一条内容" }
+{ "body": "第一条内容", "tagIds": [1, 2] }
 ```
+
+`tagIds` 可选：绑定的预置标签 id 列表（来自 `GET /api/tags`），不传或传空数组表示不带标签。
 
 响应 `201`（首次）或 `200`（幂等重放）：
 
@@ -256,7 +290,7 @@ Idempotency-Key: <可选，8~64 位>
 {
   "code": 0,
   "message": "成功",
-  "data": { "id": 12, "userId": 1, "body": "第一条内容", "likeCount": 0, "createdAt": "2026-11-15T19:51:24" }
+  "data": { "id": 12, "userId": 1, "nickname": "Alice", "body": "第一条内容", "likeCount": 0, "commentCount": 0, "createdAt": "2026-11-15T19:51:24" }
 }
 ```
 
@@ -264,6 +298,7 @@ Idempotency-Key: <可选，8~64 位>
 | --- | --- |
 | `40000` | 正文为空 / 超过 2000 字；`Idempotency-Key` 格式非法 |
 | `40100` | 未登录 |
+| `40403` | `tagIds` 里存在不存在的标签（事务回滚，内容不会创建） |
 
 ### 4.2 信息流（游标分页）
 
@@ -284,7 +319,7 @@ GET /api/contents?cursor=<上一页的 nextCursor>&size=10
   "message": "成功",
   "data": {
     "items": [
-      { "id": 12, "userId": 1, "body": "第一条内容", "likeCount": 0, "createdAt": "2026-11-15T19:51:24" }
+      { "id": 12, "userId": 1, "nickname": "Alice", "body": "第一条内容", "likeCount": 0, "commentCount": 0, "createdAt": "2026-11-15T19:51:24" }
     ],
     "nextCursor": 12,
     "hasMore": true
@@ -350,9 +385,139 @@ GET /api/contents/hot?limit=10
 
 排序来自 Redis ZSet；缓存丢失时会在读取路径上从 MySQL 重建。
 
+### 4.7 搜索
+
+```
+GET /api/contents/search?q=关键词&cursor=&size=
+```
+
+| 参数 | 必填 | 默认 | 说明 |
+| --- | --- | --- | --- |
+| `q` | 是 | 无 | 关键词，1~64 位，空白会被拒绝 |
+| `cursor` | 否 | 无 | 同信息流 |
+| `size` | 否 | 10 | 每页条数，上限 50 |
+
+响应 `200`，`data` 为 `PageResponse<ContentVO>`，按 `id` 倒序游标分页，只返回未删除内容。
+
+搜索基于 MySQL FULLTEXT + ngram 分词（2 字切分），单个汉字可能不命中，属预期。
+
 ---
 
-## 五、用 curl 走一遍
+## 五、评论
+
+### 5.1 评论列表
+
+```
+GET /api/contents/{id}/comments?cursor=&size=
+```
+
+匿名可读。响应 `200`，`data` 为 `PageResponse<CommentVO>`：
+
+```json
+{ "id": 3, "contentId": 12, "userId": 2, "nickname": "Bob", "body": "写得不错", "createdAt": "2026-11-15T20:00:00" }
+```
+
+| 错误 | 说明 |
+| --- | --- |
+| `40401` | 内容不存在或已删除 |
+
+### 5.2 发评论
+
+```
+POST /api/contents/{id}/comments
+Authorization: Bearer <token>
+```
+
+请求：`{ "body": "写得不错" }`（非空，≤ 1000 字）。响应 `201`，`data` 为 `CommentVO`。
+
+### 5.3 删评论
+
+```
+DELETE /api/comments/{id}
+Authorization: Bearer <token>
+```
+
+只能删自己的。「不存在 / 不是我的 / 已删」统一返回 `40402`（防资源枚举）。
+
+---
+
+## 六、标签
+
+### 6.1 标签列表
+
+```
+GET /api/tags
+```
+
+匿名可读。响应 `200`，`data` 是 `TagVO` 数组：`{ "id": 1, "name": "技术" }`。
+
+标签是预置数据（技术 / 生活 / 职场 / 求助 / 公告 / 闲聊），不支持用户自建。
+
+### 6.2 按标签读内容
+
+```
+GET /api/tags/{id}/contents?cursor=&size=
+```
+
+匿名可读。响应 `200`，`data` 为 `PageResponse<ContentVO>`。标签不存在 → `40403`。
+
+---
+
+## 七、收藏
+
+### 7.1 收藏 / 取消 / 状态
+
+```
+POST   /api/contents/{id}/bookmark   # 收藏（幂等）
+DELETE /api/contents/{id}/bookmark   # 取消（幂等）
+GET    /api/contents/{id}/bookmark   # 当前用户收藏态
+Authorization: Bearer <token>        # 三个都要
+```
+
+响应 `200`（三个接口同一个形状）：
+
+```json
+{ "code": 0, "message": "成功", "data": { "contentId": 12, "bookmarked": true } }
+```
+
+- 重复收藏不会报错、不会产生重复行；收藏**不计入** `like_count`、**不进**热榜
+- 对不存在/已删的内容收藏 → `40401`；取消收藏不要求内容可见（软删后仍可清理收藏）
+
+### 7.2 我收藏的
+
+```
+GET /api/me/bookmarks?cursor=&size=
+Authorization: Bearer <token>
+```
+
+响应 `200`，`data` 为 `PageResponse<ContentVO>`，按收藏先后倒序，游标为收藏记录 id。
+
+---
+
+## 八、管理
+
+### 8.1 封禁 / 解封
+
+```
+PUT /api/admin/users/{id}/status
+Authorization: Bearer <token>        # 必须是管理员（user.role = 1）
+```
+
+请求：`{ "status": 0 }`（0 禁用 / 1 正常）。响应 `200`，`data` 为 `null`。
+
+| 错误 | 说明 |
+| --- | --- |
+| `40300` | 当前用户不是管理员；或目标是管理员自己（不能封禁自己） |
+| `40400` | 目标用户不存在 |
+| `40000` | `status` 不是 0 / 1 |
+
+封禁**立即生效**：鉴权路径每个请求都会点查 `user.status`，被封禁用户访问任何需登录接口 → `40300`，登录也 → `40300`。解封即恢复。
+
+演示管理员：`demo_admin`（密码与其他演示账号一致）。
+
+---
+
+## 九、用 curl 走一遍
 
 ```bash
 BASE=http://localhost:8080
@@ -384,4 +549,17 @@ curl -s -XPOST "$BASE/api/contents/$ID/like" -H "Authorization: Bearer $TOKEN"
 
 # 7) 热榜
 curl -s "$BASE/api/contents/hot?limit=5"
+
+# 8) 搜索
+curl -s "$BASE/api/contents/search?q=第一条"
+
+# 9) 发评论（token 同上）
+curl -s -XPOST "$BASE/api/contents/$ID/comments" -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"body":"沙发"}'
+
+# 10) 收藏
+curl -s -XPOST "$BASE/api/contents/$ID/bookmark" -H "Authorization: Bearer $TOKEN"
+
+# 11) 标签列表
+curl -s "$BASE/api/tags"
 ```
