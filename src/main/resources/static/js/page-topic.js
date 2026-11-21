@@ -7,6 +7,7 @@
 
 import { ApiError, api } from './api.js';
 import { authorName, cachedMe, formatTime, handleApiError, mountShell, toast } from './shell.js';
+import { stateBlock } from './ui/state-block.js';
 
 const id = Number(new URLSearchParams(location.search).get('id'));
 const root = document.querySelector('#topic');
@@ -14,23 +15,6 @@ const root = document.querySelector('#topic');
 const state = { item: null, liked: false, likeCount: 0, bookmarked: false, commentCount: 0, busy: false };
 let likeBtn = null;
 let bookmarkBtn = null;
-
-function stateBlock(title, sub) {
-    const box = document.createElement('div');
-    box.className = 'state';
-    const h = document.createElement('p');
-    h.className = 'state-title';
-    h.textContent = title;
-    const p = document.createElement('p');
-    p.className = 'state-sub';
-    p.textContent = sub;
-    const back = document.createElement('a');
-    back.className = 'btn ghost';
-    back.href = '/';
-    back.textContent = '回到列表';
-    box.append(h, p, back);
-    root.replaceChildren(box);
-}
 
 function paintLike() {
     if (!likeBtn) return;
@@ -162,7 +146,7 @@ async function boot() {
     const me = await mountShell({ active: 'list' });
 
     if (!Number.isInteger(id) || id <= 0) {
-        stateBlock('链接里没有有效的内容编号', '地址应形如 /topic.html?id=12');
+        stateBlock(root, '链接里没有有效的内容编号', '地址应形如 /topic.html?id=12', { back: true });
         return;
     }
 
@@ -173,9 +157,9 @@ async function boot() {
         item = await api.detail(id);
     } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
-            stateBlock('内容不存在', '可能已被删除，或者链接里的编号不对。');
+            stateBlock(root, '内容不存在', '可能已被删除，或者链接里的编号不对。', { back: true });
         } else {
-            stateBlock('加载失败', error.message || '稍后刷新试试。');
+            stateBlock(root, '加载失败', error.message || '稍后刷新试试。', { back: true });
         }
         return;
     }

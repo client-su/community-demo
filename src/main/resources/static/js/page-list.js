@@ -5,7 +5,10 @@
  */
 
 import { api } from './api.js';
-import { authorName, formatTime, handleApiError, mountShell } from './shell.js';
+import { handleApiError, mountShell } from './shell.js';
+import { createCursorPager } from './paging.js';
+import { contentRow } from './ui/content-row.js';
+import { truncate } from './text.js';
 
 const PAGE_SIZE = 10;
 const params = new URLSearchParams(location.search);
@@ -28,50 +31,6 @@ const el = {
     clearSearch: document.querySelector('#clearSearch'),
 };
 
-const state = {
-    cursor: null,
-    hasMore: false,
-    loading: false,
-};
-
-function truncate(text, max) {
-    const flat = String(text || '').replace(/\s+/g, ' ').trim();
-    return flat.length > max ? `${flat.slice(0, max)}…` : flat;
-}
-
-/** 一条一行：标题一行 + 元信息一行。没有昵称可显，元信息只放时间和赞数。 */
-function rowEl(item, rank) {
-    const li = document.createElement('li');
-    li.className = 'row';
-
-    const link = document.createElement('a');
-    link.className = 'row-title';
-    link.href = `/topic.html?id=${item.id}`;
-    link.textContent = truncate(item.body, 70) || `内容 #${item.id}`;
-
-    const meta = document.createElement('p');
-    meta.className = 'row-meta';
-    const author = document.createElement('a');
-    author.className = 'row-author';
-    author.href = `/user.html?id=${item.userId}`;
-    author.textContent = authorName(item);
-    meta.append(author);
-    meta.append(` · ${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`);
-
-    if (rank) {
-        const order = document.createElement('span');
-        order.className = 'rank';
-        order.textContent = String(rank);
-        li.append(order);
-    }
-
-    const main = document.createElement('div');
-    main.className = 'row-main';
-    main.append(link, meta);
-    li.append(main);
-    return li;
-}
-
 function setEmpty(show, title, sub) {
     el.empty.hidden = !show;
     if (title) el.emptyTitle.textContent = title;
@@ -80,37 +39,30 @@ function setEmpty(show, title, sub) {
 
 /* ---------------- 最新 ---------------- */
 
-async function loadList(reset) {
-    if (state.loading) return;
-    state.loading = true;
-    el.more.disabled = true;
-    try {
-        const page = await (mode === 'search'
-            ? api.search(q, reset ? null : state.cursor, PAGE_SIZE)
-            : mode === 'tag'
-                ? api.tagContents(tagId, reset ? null : state.cursor, PAGE_SIZE)
-                : api.feed(reset ? null : state.cursor, PAGE_SIZE));
-        state.cursor = page.nextCursor;
-        state.hasMore = page.hasMore;
-        if (reset) el.rows.replaceChildren();
-        page.items.forEach((item) => el.rows.append(rowEl(item)));
-        el.more.hidden = !page.hasMore;
-        setEmpty(el.rows.children.length === 0);
-    } catch (error) {
-        handleApiError(error, '加载失败');
-        setEmpty(el.rows.children.length === 0);
-    } finally {
-        state.loading = false;
-        el.more.disabled = false;
-    }
+/** 三种数据源共用同一套分页：信息流 / 搜索 / 按标签 */
+function fetchPage(cursor, size) {
+    if (mode === 'search') return api.search(q, cursor, size);
+    if (mode === 'tag') return api.tagContents(tagId, cursor, size);
+    return api.feed(cursor, size);
 }
+
+const pager = createCursorPager({
+    container: el.rows,
+    more: el.more,
+    size: PAGE_SIZE,
+    fetchPage,
+    renderItem: (item) => contentRow(item, { showAuthor: true }),
+    onEmpty: () => setEmpty(el.rows.children.length === 0),
+    onError: handleApiError,
+    errorText: '加载失败',
+});
 
 /* ---------------- 热榜 ---------------- */
 
 async function loadHotRows() {
     try {
         const items = await api.hot(20);
-        el.rows.replaceChildren(...items.map((item, index) => rowEl(item, index + 1)));
+        el.rows.replaceChildren(...items.map((item, index) => contentRow(item, { rank: index + 1, showAuthor: true })));
         setEmpty(items.length === 0, '还没有点赞数据', '先在详情页点一个赞，这里就有排名了。');
     } catch (error) {
         handleApiError(error, '热榜加载失败');
@@ -277,8 +229,8 @@ async function boot() {
         location.href = value ? `/?q=${encodeURIComponent(value)}` : '/';
     });
 
-    el.more.addEventListener('click', () => loadList(false));
-    await Promise.all([loadList(true), renderSideHot(), renderSideTags()]);
+    el.more.addEventListener('click', () => pager.load());
+    await Promise.all([pager.reset(), renderSideHot(), renderSideTags()]);
 }
 
 boot();

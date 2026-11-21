@@ -3,7 +3,9 @@
  */
 
 import { api, setToken } from './api.js';
-import { cacheMe, clearMe, formatDate, formatTime, handleApiError, initial, mountShell, refreshAuthArea, signOut, toast } from './shell.js';
+import { cacheMe, clearMe, formatDate, handleApiError, initial, mountShell, refreshAuthArea, signOut, toast } from './shell.js';
+import { createCursorPager } from './paging.js';
+import { contentRow } from './ui/content-row.js';
 
 const PAGE_SIZE = 10;
 
@@ -29,12 +31,6 @@ const el = {
 };
 
 let tab = 'contents';
-const state = { cursor: null, hasMore: false, loading: false };
-
-function truncate(text, max) {
-    const flat = String(text || '').replace(/\s+/g, ' ').trim();
-    return flat.length > max ? `${flat.slice(0, max)}…` : flat;
-}
 
 function paint(me) {
     el.avatar.textContent = initial(me);
@@ -93,58 +89,33 @@ async function save(event) {
     }
 }
 
-function rowEl(item) {
-    const li = document.createElement('li');
-    li.className = 'row';
-
-    const link = document.createElement('a');
-    link.className = 'row-title';
-    link.href = `/topic.html?id=${item.id}`;
-    link.textContent = truncate(item.body, 70) || `内容 #${item.id}`;
-
-    const meta = document.createElement('p');
-    meta.className = 'row-meta';
-    meta.textContent = `${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`;
-
-    const main = document.createElement('div');
-    main.className = 'row-main';
-    main.append(link, meta);
-    li.append(main);
-    return li;
-}
-
 function setEmpty(show, title, sub) {
     el.empty.hidden = !show;
     if (title) el.emptyTitle.textContent = title;
     if (sub) el.emptySub.textContent = sub;
 }
 
-async function loadList(reset) {
-    if (state.loading) return;
-    state.loading = true;
-    el.more.disabled = true;
-    try {
-        const page = tab === 'contents'
-            ? await api.myContents(reset ? null : state.cursor, PAGE_SIZE)
-            : tab === 'likes'
-                ? await api.myLikes(reset ? null : state.cursor, PAGE_SIZE)
-                : await api.myBookmarks(reset ? null : state.cursor, PAGE_SIZE);
-        state.cursor = page.nextCursor;
-        state.hasMore = page.hasMore;
-        if (reset) el.rows.replaceChildren();
-        page.items.forEach((item) => el.rows.append(rowEl(item)));
-        el.more.hidden = !page.hasMore;
-        const emptyTitle = tab === 'contents' ? '还没有发布内容'
-            : tab === 'likes' ? '还没有赞过内容' : '还没有收藏内容';
-        setEmpty(el.rows.children.length === 0, emptyTitle, '');
-    } catch (error) {
-        handleApiError(error, '加载失败');
-        setEmpty(el.rows.children.length === 0);
-    } finally {
-        state.loading = false;
-        el.more.disabled = false;
-    }
-}
+/* 三个 tab 共用一套分页：我发布的 / 我赞过的 / 我收藏的 */
+const pager = createCursorPager({
+    container: el.rows,
+    more: el.more,
+    size: PAGE_SIZE,
+    fetchPage: (cursor, size) => (
+        tab === 'contents' ? api.myContents(cursor, size)
+            : tab === 'likes' ? api.myLikes(cursor, size)
+                : api.myBookmarks(cursor, size)
+    ),
+    renderItem: (item) => contentRow(item),
+    onEmpty: ({ error }) => {
+        // 失败时保持原有空态文案不动，与改造前一致
+        const title = error ? undefined
+            : tab === 'contents' ? '还没有发布内容'
+                : tab === 'likes' ? '还没有赞过内容' : '还没有收藏内容';
+        setEmpty(el.rows.children.length === 0, title, '');
+    },
+    onError: handleApiError,
+    errorText: '加载失败',
+});
 
 function switchTab(next) {
     if (tab === next) return;
@@ -152,8 +123,7 @@ function switchTab(next) {
     document.querySelectorAll('#meTabs a').forEach((a) => {
         a.classList.toggle('active', a.dataset.tab === tab);
     });
-    state.cursor = null;
-    loadList(true);
+    pager.reset();
 }
 
 async function boot() {
@@ -174,8 +144,8 @@ async function boot() {
             switchTab(a.dataset.tab);
         });
     });
-    el.more.addEventListener('click', () => loadList(false));
-    loadList(true);
+    el.more.addEventListener('click', () => pager.load());
+    pager.reset();
 }
 
 boot();

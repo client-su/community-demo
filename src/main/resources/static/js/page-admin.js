@@ -8,6 +8,7 @@
 
 import { api } from './api.js';
 import { handleApiError, mountShell, toast } from './shell.js';
+import { stateBlock } from './ui/state-block.js';
 
 const el = {
     form: document.querySelector('#banForm'),
@@ -16,19 +17,6 @@ const el = {
     unbanBtn: document.querySelector('#unbanBtn'),
     root: document.querySelector('#adminRoot'),
 };
-
-function stateBlock(title, sub) {
-    const box = document.createElement('div');
-    box.className = 'state';
-    const h = document.createElement('p');
-    h.className = 'state-title';
-    h.textContent = title;
-    const p = document.createElement('p');
-    p.className = 'state-sub';
-    p.textContent = sub;
-    box.append(h, p);
-    el.root.replaceChildren(box);
-}
 
 async function submit(event, status) {
     event.preventDefault();
@@ -60,7 +48,7 @@ async function boot() {
         return;
     }
     if (me.role !== 1) {
-        stateBlock('需要管理员权限', '这个页面只有管理员（role=1）能打开。');
+        stateBlock(el.root, '需要管理员权限', '这个页面只有管理员（role=1）能打开。');
         return;
     }
 

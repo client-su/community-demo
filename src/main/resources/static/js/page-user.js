@@ -4,7 +4,9 @@
  */
 
 import { api } from './api.js';
-import { formatDate, formatTime, handleApiError, initial, mountShell } from './shell.js';
+import { formatDate, handleApiError, initial, mountShell } from './shell.js';
+import { createCursorPager } from './paging.js';
+import { contentRow } from './ui/content-row.js';
 
 const id = Number(new URLSearchParams(location.search).get('id'));
 const PAGE_SIZE = 10;
@@ -15,33 +17,6 @@ const el = {
     empty: document.querySelector('#empty'),
     more: document.querySelector('#moreBtn'),
 };
-
-const state = { cursor: null, hasMore: false, loading: false };
-
-function truncate(text, max) {
-    const flat = String(text || '').replace(/\s+/g, ' ').trim();
-    return flat.length > max ? `${flat.slice(0, max)}…` : flat;
-}
-
-function rowEl(item) {
-    const li = document.createElement('li');
-    li.className = 'row';
-
-    const link = document.createElement('a');
-    link.className = 'row-title';
-    link.href = `/topic.html?id=${item.id}`;
-    link.textContent = truncate(item.body, 70) || `内容 #${item.id}`;
-
-    const meta = document.createElement('p');
-    meta.className = 'row-meta';
-    meta.textContent = `${formatTime(item.createdAt)} · ${item.likeCount ?? 0} 赞`;
-
-    const main = document.createElement('div');
-    main.className = 'row-main';
-    main.append(link, meta);
-    li.append(main);
-    return li;
-}
 
 function paintProfile(user) {
     el.profile.replaceChildren();
@@ -74,26 +49,18 @@ function paintProfile(user) {
     el.profile.append(head, kv);
 }
 
-async function loadList(reset) {
-    if (state.loading) return;
-    state.loading = true;
-    el.more.disabled = true;
-    try {
-        const page = await api.userContents(id, reset ? null : state.cursor, PAGE_SIZE);
-        state.cursor = page.nextCursor;
-        state.hasMore = page.hasMore;
-        if (reset) el.rows.replaceChildren();
-        page.items.forEach((item) => el.rows.append(rowEl(item)));
-        el.more.hidden = !page.hasMore;
+const pager = createCursorPager({
+    container: el.rows,
+    more: el.more,
+    size: PAGE_SIZE,
+    fetchPage: (cursor, size) => api.userContents(id, cursor, size),
+    renderItem: (item) => contentRow(item),
+    onEmpty: () => {
         el.empty.hidden = el.rows.children.length > 0;
-    } catch (error) {
-        handleApiError(error, '加载失败');
-        el.empty.hidden = el.rows.children.length > 0;
-    } finally {
-        state.loading = false;
-        el.more.disabled = false;
-    }
-}
+    },
+    onError: handleApiError,
+    errorText: '加载失败',
+});
 
 async function boot() {
     await mountShell({ active: 'list' });
@@ -115,8 +82,8 @@ async function boot() {
 
     document.title = `社区 · ${user.nickname || user.username}`;
     paintProfile(user);
-    await loadList(true);
-    el.more.addEventListener('click', () => loadList(false));
+    await pager.reset();
+    el.more.addEventListener('click', () => pager.load());
 }
 
 boot();
