@@ -1,4 +1,4 @@
-# community · 用户中心 + 内容社区
+# community-demo · 用户中心 + 内容社区
 
 > Java + Spring Boot 3 的内容社区后端：注册登录 → JWT 鉴权 → 内容发布与游标分页 →
 > 点赞与 Redis 热榜 → 评论 / 搜索 / 标签 / 收藏 → 限流与幂等。
@@ -16,7 +16,7 @@
 
 ## 快速开始
 
-前置：JDK 17+、Maven 3.9+、Docker（只用来起 MySQL 与 Redis）。
+前置：JDK 21+、Maven 3.9+、Docker（只用来起 MySQL 与 Redis）。
 
 ```bash
 docker compose up -d                    # 起 MySQL 8 + Redis 7，首次启动会自动建表
@@ -72,7 +72,7 @@ community/
 ├── deploy/sql/
 │   ├── schema.sql       建表
 │   ├── seed-demo.sql    演示数据
-│   └── migrations/      增量迁移
+│   └── migrations/      增量迁移（按 001~ 序号依次执行）
 ├── docker-compose.yml   只起 MySQL + Redis
 └── .githooks/commit-msg 提交信息校验
 ```

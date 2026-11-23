@@ -1,7 +1,7 @@
 # 只起依赖（MySQL + Redis），不起应用。
 #
 # 应用仍用 mvn spring-boot:run 在本机跑：改一行 Java 不用重建镜像，
-# 也不需要把仓库打进容器——这是个用来被审阅的项目，启动路径越短越好。
+# 也不用把整个仓库打进镜像——启动路径最短，调试最方便。
 #
 #   docker compose up -d
 #   mvn spring-boot:run
