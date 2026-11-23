@@ -1,4 +1,4 @@
-# community-demo · 用户中心 + 内容社区
+# community-demo
 
 > Java + Spring Boot 3 的内容社区后端：注册登录 → JWT 鉴权 → 内容发布与游标分页 →
 > 点赞与 Redis 热榜 → 评论 / 搜索 / 标签 / 收藏 → 限流与幂等。
