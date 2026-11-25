@@ -715,6 +715,17 @@ input:focus {
 
 /* ---------- 资料页 ---------- */
 
+.profile-feed-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 22px 2px 8px;
+}
+
+.profile-feed-head h2 {
+    font-size: 15px;
+}
+
 .me-head {
     display: flex;
     align-items: center;
