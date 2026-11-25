@@ -44,7 +44,15 @@ function paintProfile(user) {
     const dd = document.createElement('dd');
     dd.textContent = formatDate(user.createdAt) || '—';
     row.append(dt, dd);
-    kv.append(row);
+
+    const idRow = document.createElement('div');
+    const idDt = document.createElement('dt');
+    idDt.textContent = '用户 ID';
+    const idDd = document.createElement('dd');
+    idDd.textContent = String(user.id);
+    idRow.append(idDt, idDd);
+
+    kv.append(row, idRow);
 
     el.profile.append(head, kv);
 }
