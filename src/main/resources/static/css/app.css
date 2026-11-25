@@ -1333,6 +1333,8 @@ input:focus {
     white-space: pre-wrap;
     word-break: break-word;
     min-height: 42px;
+    max-height: 150px;
+    overflow-y: auto;
 }
 
 .lab-out.ok {

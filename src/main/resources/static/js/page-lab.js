@@ -23,9 +23,19 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let rateLines = [];
 let idemLines = [];
 
+const MAX_LINES = 6;
+
 function addLine(out, lines, text) {
     lines.push(text);
+    if (lines.length > MAX_LINES) {
+        // 保留第一条（首次创建 201）和最近 5 条（重放 200），避免日志无限增长
+        const first = lines[0];
+        const tail = lines.slice(-(MAX_LINES - 1));
+        lines.length = 0;
+        lines.push(first, ...tail);
+    }
     out.textContent = lines.join('\n');
+    out.scrollTop = out.scrollHeight;
 }
 
 /* ---------------- 限流演示 ---------------- */
