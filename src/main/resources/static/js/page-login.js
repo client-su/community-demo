@@ -23,6 +23,7 @@ const el = {
     nicknameRow: document.querySelector('#nicknameRow'),
     demoTip: document.querySelector('#demoTip'),
     demoFill: document.querySelector('#demoFill'),
+    demoFillAdmin: document.querySelector('#demoFillAdmin'),
 };
 
 /** 后端校验消息里的英文字段名 → 前端展示的中文名，避免把内部字段名透给用户 */
@@ -89,12 +90,15 @@ el.switch.addEventListener('click', () => {
 });
 
 // 点击演示账号，直接填入用户名与密码
-el.demoFill.addEventListener('click', () => {
-    el.form.elements.username.value = 'demo_alice';
+function fillDemo(username) {
+    el.form.elements.username.value = username;
     el.form.elements.password.value = 'Passw0rd!2026';
     el.msg.textContent = '';
     el.form.elements.password.focus();
-});
+}
+
+el.demoFill.addEventListener('click', () => fillDemo('demo_alice'));
+el.demoFillAdmin.addEventListener('click', () => fillDemo('demo_admin'));
 
 el.form.addEventListener('submit', async (event) => {
     event.preventDefault();
