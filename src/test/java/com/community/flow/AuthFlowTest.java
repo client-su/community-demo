@@ -14,11 +14,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -146,5 +148,50 @@ class AuthFlowTest {
                         org.hamcrest.Matchers.containsString("username")))
                 .andExpect(jsonPath("$.message").value(
                         org.hamcrest.Matchers.containsString("password")));
+    }
+
+    /**
+     * 登录限流：同一 IP 每分钟 5 次，第 6 次 429。
+     *
+     * <p>固定窗口按 epochSecond/60 分桶，若刚好跨桶，6 次请求会被算进两个窗口导致用例偶发失败。
+     * 所以临近桶边界时先等过去；一个桶只剩 3 秒以上，6 次请求（每次一次 BCrypt）绰绰有余。
+     */
+    @Test
+    void loginIsRateLimitedAfterFiveAttemptsPerMinute() throws Exception {
+        long secondInWindow = Instant.now().getEpochSecond() % 60;
+        if (secondInWindow >= 57) {
+            Thread.sleep((60 - secondInWindow) * 1000 + 200);
+        }
+
+        // 独占一个 IP：限流键按 IP + 时间桶隔离，避免和同类的其他请求共用计数
+        String ip = "198.51.100.7";
+        String body = json("no_such_user_xyz", "wrong-password");
+
+        // 前 5 次：凭证错误，正常 401（此时限流还放行）
+        for (int i = 1; i <= 5; i++) {
+            mockMvc.perform(post("/api/auth/login")
+                            .with(request -> {
+                                request.setRemoteAddr(ip);
+                                return request;
+                            })
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value(40101));
+        }
+
+        // 第 6 次：在进入 Controller 之前就被 RateLimitInterceptor 挡住
+        mockMvc.perform(post("/api/auth/login")
+                        .with(request -> {
+                            request.setRemoteAddr(ip);
+                            return request;
+                        })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value(42900))
+                .andExpect(header().string("X-RateLimit-Limit", "5"))
+                .andExpect(header().string("X-RateLimit-Remaining", "0"))
+                .andExpect(header().exists("Retry-After"));
     }
 }
